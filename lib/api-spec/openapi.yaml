@@ -3,20 +3,31 @@ info:
   # Do not change the title, if the title changes, the import paths will be broken
   title: Api
   version: 0.1.0
-  description: API specification
+  description: ROM Launcher API
 servers:
   - url: /api
     description: Base API path
 tags:
   - name: health
     description: Health operations
+  - name: roms
+    description: ROM operations
+  - name: platforms
+    description: Platform/console operations
+  - name: news
+    description: News operations
+  - name: downloads
+    description: Download operations
+  - name: library
+    description: Library operations
+  - name: stats
+    description: Statistics operations
 paths:
   /healthz:
     get:
       operationId: healthCheck
       tags: [health]
       summary: Health check
-      description: Returns server health status
       responses:
         "200":
           description: Healthy
@@ -24,6 +35,210 @@ paths:
             application/json:
               schema:
                 $ref: "#/components/schemas/HealthStatus"
+
+  /platforms:
+    get:
+      operationId: getPlatforms
+      tags: [platforms]
+      summary: List all platforms/consoles
+      responses:
+        "200":
+          description: List of platforms
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/Platform"
+
+  /roms:
+    get:
+      operationId: getRoms
+      tags: [roms]
+      summary: List ROMs with optional filtering
+      parameters:
+        - name: platformId
+          in: query
+          required: false
+          schema:
+            type: ["string", "null"]
+        - name: search
+          in: query
+          required: false
+          schema:
+            type: ["string", "null"]
+        - name: genre
+          in: query
+          required: false
+          schema:
+            type: ["string", "null"]
+        - name: limit
+          in: query
+          required: false
+          schema:
+            type: ["integer", "null"]
+        - name: offset
+          in: query
+          required: false
+          schema:
+            type: ["integer", "null"]
+      responses:
+        "200":
+          description: List of ROMs
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/Rom"
+
+  /roms/featured:
+    get:
+      operationId: getFeaturedRoms
+      tags: [roms]
+      summary: Get featured ROMs for the hero section
+      responses:
+        "200":
+          description: Featured ROMs
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/Rom"
+
+  /roms/{id}:
+    get:
+      operationId: getRom
+      tags: [roms]
+      summary: Get a single ROM by ID
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      responses:
+        "200":
+          description: ROM details
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Rom"
+        "404":
+          description: Not found
+
+  /news:
+    get:
+      operationId: getNews
+      tags: [news]
+      summary: List news articles
+      parameters:
+        - name: limit
+          in: query
+          required: false
+          schema:
+            type: ["integer", "null"]
+      responses:
+        "200":
+          description: List of news articles
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/NewsArticle"
+
+  /news/latest:
+    get:
+      operationId: getLatestNews
+      tags: [news]
+      summary: Get the latest news articles (top 3)
+      responses:
+        "200":
+          description: Latest news
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/NewsArticle"
+
+  /downloads:
+    get:
+      operationId: getDownloads
+      tags: [downloads]
+      summary: List all active and recent downloads
+      responses:
+        "200":
+          description: Download queue
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/Download"
+    post:
+      operationId: createDownload
+      tags: [downloads]
+      summary: Start a new download
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/DownloadInput"
+      responses:
+        "201":
+          description: Download started
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Download"
+
+  /downloads/{id}:
+    delete:
+      operationId: cancelDownload
+      tags: [downloads]
+      summary: Cancel or remove a download
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      responses:
+        "204":
+          description: Cancelled
+
+  /library:
+    get:
+      operationId: getLibrary
+      tags: [library]
+      summary: Get the user library (completed downloads)
+      responses:
+        "200":
+          description: Library entries
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/LibraryEntry"
+
+  /stats:
+    get:
+      operationId: getStats
+      tags: [stats]
+      summary: Dashboard statistics
+      responses:
+        "200":
+          description: Stats overview
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Stats"
+
 components:
   schemas:
     HealthStatus:
@@ -34,3 +249,207 @@ components:
       required:
         - status
 
+    Platform:
+      type: object
+      properties:
+        id:
+          type: integer
+        name:
+          type: string
+        slug:
+          type: string
+        manufacturer:
+          type: string
+        romCount:
+          type: integer
+        iconUrl:
+          type: ["string", "null"]
+        color:
+          type: string
+        year:
+          type: integer
+      required:
+        - id
+        - name
+        - slug
+        - manufacturer
+        - romCount
+        - color
+        - year
+
+    Rom:
+      type: object
+      properties:
+        id:
+          type: integer
+        title:
+          type: string
+        platformId:
+          type: integer
+        platformName:
+          type: string
+        genre:
+          type: string
+        region:
+          type: string
+        year:
+          type: integer
+        size:
+          type: string
+        coverUrl:
+          type: ["string", "null"]
+        rating:
+          type: number
+        downloadCount:
+          type: integer
+        isFeatured:
+          type: boolean
+        description:
+          type: ["string", "null"]
+      required:
+        - id
+        - title
+        - platformId
+        - platformName
+        - genre
+        - region
+        - year
+        - size
+        - rating
+        - downloadCount
+        - isFeatured
+
+    NewsArticle:
+      type: object
+      properties:
+        id:
+          type: integer
+        title:
+          type: string
+        summary:
+          type: string
+        content:
+          type: string
+        imageUrl:
+          type: ["string", "null"]
+        category:
+          type: string
+        publishedAt:
+          type: string
+        author:
+          type: string
+        readTime:
+          type: integer
+      required:
+        - id
+        - title
+        - summary
+        - content
+        - category
+        - publishedAt
+        - author
+        - readTime
+
+    Download:
+      type: object
+      properties:
+        id:
+          type: integer
+        romId:
+          type: integer
+        romTitle:
+          type: string
+        platformName:
+          type: string
+        progress:
+          type: number
+        speed:
+          type: string
+        size:
+          type: string
+        status:
+          type: string
+        startedAt:
+          type: string
+        coverUrl:
+          type: ["string", "null"]
+      required:
+        - id
+        - romId
+        - romTitle
+        - platformName
+        - progress
+        - speed
+        - size
+        - status
+        - startedAt
+
+    DownloadInput:
+      type: object
+      properties:
+        romId:
+          type: integer
+      required:
+        - romId
+
+    LibraryEntry:
+      type: object
+      properties:
+        id:
+          type: integer
+        romId:
+          type: integer
+        romTitle:
+          type: string
+        platformName:
+          type: string
+        platformSlug:
+          type: string
+        coverUrl:
+          type: ["string", "null"]
+        installedAt:
+          type: string
+        lastPlayedAt:
+          type: ["string", "null"]
+        fileSize:
+          type: string
+        timesPlayed:
+          type: integer
+      required:
+        - id
+        - romId
+        - romTitle
+        - platformName
+        - platformSlug
+        - installedAt
+        - fileSize
+        - timesPlayed
+
+    Stats:
+      type: object
+      properties:
+        totalRoms:
+          type: integer
+        totalPlatforms:
+          type: integer
+        totalDownloads:
+          type: integer
+        librarySize:
+          type: string
+        activeDownloads:
+          type: integer
+        newThisWeek:
+          type: integer
+        mostPopularPlatform:
+          type: string
+        totalDownloadCount:
+          type: integer
+      required:
+        - totalRoms
+        - totalPlatforms
+        - totalDownloads
+        - librarySize
+        - activeDownloads
+        - newThisWeek
+        - mostPopularPlatform
+        - totalDownloadCount

@@ -1,0 +1,27 @@
+kind = "web"
+previewPath = "/"
+title = "ROM Launcher"
+version = "1.0.0"
+id = "artifacts/rom-launcher"
+router = "path"
+
+[[services]]
+name = "web"
+paths = [ "/" ]
+localPort = 19707
+
+[services.development]
+run = "pnpm --filter @workspace/rom-launcher run dev"
+
+[services.production]
+build = [ "pnpm", "--filter", "@workspace/rom-launcher", "run", "build" ]
+serve = "static"
+publicDir = "artifacts/rom-launcher/dist/public"
+
+[[services.production.rewrites]]
+from = "/*"
+to = "/index.html"
+
+[services.env]
+PORT = "19707"
+BASE_PATH = "/"
