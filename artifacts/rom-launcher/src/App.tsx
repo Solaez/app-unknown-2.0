@@ -12,6 +12,7 @@ import Downloads from '@/pages/downloads';
 import Library from '@/pages/library';
 import News from '@/pages/news';
 import RomDetails from '@/pages/rom-details';
+import Settings from '@/pages/settings';
 import NotFound from '@/pages/not-found';
 
 const queryClient = new QueryClient({
@@ -34,6 +35,7 @@ function Router() {
         <Route path="/library" component={Library} />
         <Route path="/news" component={News} />
         <Route path="/rom/:id" component={RomDetails} />
+        <Route path="/settings" component={Settings} />
         <Route component={NotFound} />
       </Switch>
     </Layout>

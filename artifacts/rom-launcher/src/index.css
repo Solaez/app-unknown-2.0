@@ -162,6 +162,46 @@
   box-shadow: 0 0 20px 0px hsl(var(--primary) / 0.7), inset 0 0 10px 0px hsl(var(--primary) / 0.3);
 }
 
+/* ── Neon range slider ── */
+.neon-slider {
+  -webkit-appearance: none;
+  appearance: none;
+  height: 4px;
+  border-radius: 9999px;
+  background: rgba(255,255,255,0.08);
+  outline: none;
+  cursor: pointer;
+}
+.neon-slider::-webkit-slider-thumb {
+  -webkit-appearance: none;
+  appearance: none;
+  width: 16px;
+  height: 16px;
+  border-radius: 50%;
+  background: hsl(var(--primary));
+  box-shadow: 0 0 10px hsl(var(--primary) / 0.8), 0 0 20px hsl(var(--primary) / 0.4);
+  cursor: pointer;
+  border: 2px solid white;
+  transition: transform 0.15s;
+}
+.neon-slider::-webkit-slider-thumb:hover {
+  transform: scale(1.2);
+}
+.neon-slider::-moz-range-thumb {
+  width: 16px;
+  height: 16px;
+  border-radius: 50%;
+  background: hsl(var(--primary));
+  box-shadow: 0 0 10px hsl(var(--primary) / 0.8);
+  cursor: pointer;
+  border: 2px solid white;
+}
+.neon-slider::-webkit-slider-runnable-track {
+  background: linear-gradient(to right, hsl(var(--primary) / 0.6), hsl(var(--secondary) / 0.4));
+  border-radius: 9999px;
+  height: 4px;
+}
+
 .neon-text {
   text-shadow: 0 0 10px hsl(var(--primary) / 0.8), 0 0 20px hsl(var(--primary) / 0.4);
 }

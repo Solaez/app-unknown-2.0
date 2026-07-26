@@ -1,65 +1,113 @@
 import { Link, useLocation } from 'wouter';
-import { Home, Gamepad2, Layers, Download, Library as LibraryIcon, Newspaper, Settings } from 'lucide-react';
+import {
+  Home,
+  Gamepad2,
+  Layers3,
+  Download,
+  Library as LibraryIcon,
+  Newspaper,
+  Settings,
+  Zap,
+} from 'lucide-react';
 import { cn } from '@/lib/utils';
-import { useGetStats } from '@workspace/api-client-react';
+import { useGetDownloads } from '@workspace/api-client-react';
+
+const navItems = [
+  { href: '/', label: 'Dashboard', icon: Home },
+  { href: '/browse', label: 'Browse ROMs', icon: Gamepad2 },
+  { href: '/platforms', label: 'Platforms', icon: Layers3 },
+  { href: '/downloads', label: 'Downloads', icon: Download },
+  { href: '/library', label: 'My Library', icon: LibraryIcon },
+  { href: '/news', label: 'News Feed', icon: Newspaper },
+];
 
 export default function Sidebar() {
   const [location] = useLocation();
-  const { data: stats } = useGetStats();
-
-  const activeDownloads = stats?.activeDownloads || 0;
-
-  const navItems = [
-    { href: '/', label: 'Dashboard', icon: Home },
-    { href: '/browse', label: 'Browse ROMs', icon: Gamepad2 },
-    { href: '/platforms', label: 'Platforms', icon: Layers },
-    { href: '/downloads', label: 'Downloads', icon: Download, badge: activeDownloads },
-    { href: '/library', label: 'My Library', icon: LibraryIcon },
-    { href: '/news', label: 'News Feed', icon: Newspaper },
-  ];
+  const { data: downloads } = useGetDownloads();
+  const activeCount = downloads?.filter((d) => d.status === 'downloading').length ?? 0;
 
   return (
-    <aside className="w-64 border-r border-white/5 bg-background/80 backdrop-blur-xl flex flex-col z-20 flex-shrink-0">
-      <div className="p-6 flex items-center gap-3">
-        <div className="w-8 h-8 rounded-lg bg-primary/20 border border-primary/50 flex items-center justify-center neon-glow">
-          <Gamepad2 className="w-5 h-5 text-primary" />
+    <aside className="w-[160px] flex-shrink-0 flex flex-col z-20 border-r border-white/5"
+      style={{ background: 'hsl(240 10% 3%)' }}
+    >
+      {/* Logo */}
+      <div className="flex flex-col items-center pt-6 pb-4 px-4 gap-2">
+        <div className="w-10 h-10 rounded-xl flex items-center justify-center neon-glow"
+          style={{ background: 'linear-gradient(135deg, #7c3aed 0%, #2563eb 100%)' }}
+        >
+          <Gamepad2 className="w-5 h-5 text-white" />
         </div>
-        <span className="font-bold text-xl tracking-tight neon-text uppercase">NeonROM</span>
+        <span className="font-black text-[13px] tracking-[0.2em] uppercase neon-text">NeonROM</span>
       </div>
 
-      <nav className="flex-1 px-4 py-6 space-y-2">
-        <div className="text-xs font-semibold text-muted-foreground uppercase tracking-wider mb-4 px-2">Menu</div>
-        
+      {/* Nav */}
+      <nav className="flex-1 px-3 py-2 space-y-0.5">
+        <p className="text-[10px] font-semibold text-muted-foreground uppercase tracking-widest px-2 py-2 mb-1">Menu</p>
         {navItems.map((item) => {
-          const isActive = location === item.href || (item.href !== '/' && location.startsWith(item.href));
+          const isActive =
+            location === item.href || (item.href !== '/' && location.startsWith(item.href));
+          const badge =
+            item.href === '/downloads' && activeCount > 0 ? activeCount : null;
+
           return (
             <Link key={item.href} href={item.href}>
               <div
                 className={cn(
-                  "flex items-center gap-3 px-3 py-2.5 rounded-lg transition-all duration-200 cursor-pointer group",
-                  isActive 
-                    ? "bg-primary/10 text-primary neon-glow" 
-                    : "text-muted-foreground hover:bg-white/5 hover:text-foreground"
+                  'flex items-center gap-2.5 px-2.5 py-2 rounded-lg transition-all duration-150 cursor-pointer group relative',
+                  isActive
+                    ? 'bg-primary/15 text-primary'
+                    : 'text-muted-foreground hover:bg-white/5 hover:text-foreground'
                 )}
               >
-                <item.icon className={cn("w-5 h-5 transition-transform group-hover:scale-110", isActive && "drop-shadow-[0_0_8px_rgba(124,58,237,0.8)]")} />
-                <span className="font-medium text-sm">{item.label}</span>
-                {item.badge && item.badge > 0 ? (
-                  <span className="ml-auto bg-primary text-primary-foreground text-[10px] font-bold px-2 py-0.5 rounded-full neon-glow">
-                    {item.badge}
+                {isActive && (
+                  <span className="absolute left-0 top-1/2 -translate-y-1/2 w-[3px] h-5 rounded-r-full bg-primary neon-glow" />
+                )}
+                <item.icon
+                  className={cn(
+                    'w-4 h-4 shrink-0 transition-colors',
+                    isActive && 'drop-shadow-[0_0_6px_rgba(124,58,237,0.8)]'
+                  )}
+                />
+                <span className="text-[13px] font-medium truncate">{item.label}</span>
+                {badge && (
+                  <span className="ml-auto bg-primary text-white text-[9px] font-bold px-1.5 py-0.5 rounded-full">
+                    {badge}
                   </span>
-                ) : null}
+                )}
               </div>
             </Link>
           );
         })}
       </nav>
 
-      <div className="p-4 border-t border-white/5">
-        <div className="flex items-center gap-3 px-3 py-2.5 rounded-lg text-muted-foreground hover:bg-white/5 hover:text-foreground cursor-pointer transition-colors group">
-          <Settings className="w-5 h-5 group-hover:rotate-90 transition-transform duration-300" />
-          <span className="font-medium text-sm">Settings</span>
-        </div>
+      {/* Settings */}
+      <div className="px-3 pb-3">
+        <Link href="/settings">
+          <div className={cn(
+            'flex items-center gap-2.5 px-2.5 py-2 rounded-lg transition-all duration-150 cursor-pointer relative',
+            location === '/settings'
+              ? 'bg-primary/15 text-primary'
+              : 'text-muted-foreground hover:bg-white/5 hover:text-foreground'
+          )}>
+            {location === '/settings' && (
+              <span className="absolute left-0 top-1/2 -translate-y-1/2 w-[3px] h-5 rounded-r-full bg-primary neon-glow" />
+            )}
+            <Settings className={cn('w-4 h-4', location === '/settings' && 'drop-shadow-[0_0_6px_rgba(124,58,237,0.8)]')} />
+            <span className="text-[13px] font-medium">Settings</span>
+          </div>
+        </Link>
+      </div>
+
+      {/* Upgrade card */}
+      <div className="mx-3 mb-4 p-3 rounded-xl border border-primary/20 bg-primary/5">
+        <Zap className="w-4 h-4 text-primary mb-1.5" />
+        <p className="text-[11px] font-bold text-white mb-0.5">Upgrade Plan</p>
+        <p className="text-[10px] text-muted-foreground leading-tight mb-2">
+          Unlock faster downloads &amp; no limits
+        </p>
+        <button className="w-full text-[11px] font-bold bg-primary text-white py-1.5 rounded-lg neon-glow hover:bg-primary/90 transition-colors">
+          Upgrade Now
+        </button>
       </div>
     </aside>
   );
