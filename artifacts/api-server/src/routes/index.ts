@@ -6,6 +6,7 @@ import newsRouter from "./news";
 import downloadsRouter from "./downloads";
 import libraryRouter from "./library";
 import statsRouter from "./stats";
+import igdbRouter from "./igdb";
 
 const router: IRouter = Router();
 
@@ -16,5 +17,6 @@ router.use(newsRouter);
 router.use(downloadsRouter);
 router.use(libraryRouter);
 router.use(statsRouter);
+router.use(igdbRouter);
 
 export default router;

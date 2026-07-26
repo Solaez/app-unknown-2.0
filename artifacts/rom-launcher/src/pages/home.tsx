@@ -4,9 +4,9 @@ import { Link } from 'wouter';
 import {
   Gamepad2, HardDrive, Download, ChevronRight, Sparkles,
   TrendingUp, Clock, Star, ExternalLink, Layers3, Newspaper,
-  Activity, Zap, ChevronDown,
+  Activity, Zap,
 } from 'lucide-react';
-import { useAllRoms, useConsoles, useRomStats } from '@/hooks/use-rom-data';
+import { useAllRoms, useConsoles, useRomStats, useIgdbGameInfo } from '@/hooks/use-rom-data';
 import { useGetDownloads, useGetLatestNews } from '@workspace/api-client-react';
 import type { FlatRom } from '@/types/rom-types';
 
@@ -38,9 +38,7 @@ function StatCard({
         <Icon className="w-4 h-4" style={{ color }} />
       </div>
       <div className="min-w-0">
-        <p className="text-[22px] font-black leading-tight tracking-tight" style={{ color: 'white' }}>
-          {value}
-        </p>
+        <p className="text-[22px] font-black leading-tight tracking-tight" style={{ color: 'white' }}>{value}</p>
         <p className="text-[11px] text-muted-foreground uppercase tracking-wide font-medium truncate">{label}</p>
       </div>
       {sub && (
@@ -78,9 +76,80 @@ function RomRow({ rom, rank }: { rom: FlatRom; rank: number }) {
   );
 }
 
+/* ---------- Featured slide — fetches its own IGDB data ---------- */
+function FeaturedSlide({ rom, featuredIdx, slideIdx, total, onDotClick }: {
+  rom: FlatRom;
+  featuredIdx: number;
+  slideIdx: number;
+  total: number;
+  onDotClick: (i: number) => void;
+}) {
+  const { data: igdb } = useIgdbGameInfo(rom.title, rom.consoleName);
+
+  /* Prefer: IGDB screenshot → IGDB cover → local cover */
+  const bgUrl = igdb?.screenshots?.[0] || igdb?.coverUrl || rom.coverUrl;
+
+  return (
+    <motion.div
+      key={slideIdx}
+      initial={{ opacity: 0 }}
+      animate={{ opacity: 1 }}
+      exit={{ opacity: 0 }}
+      transition={{ duration: 0.7 }}
+      className="absolute inset-0"
+    >
+      {bgUrl ? (
+        <img src={bgUrl} alt={rom.title}
+          className="w-full h-full object-cover object-center" />
+      ) : (
+        <div className="w-full h-full" style={{ background: rom.consoleGradient }} />
+      )}
+      <div className="absolute inset-0 bg-gradient-to-r from-black/90 via-black/60 to-transparent" />
+      <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-transparent to-transparent" />
+
+      <div className="absolute bottom-0 left-0 p-6 max-w-sm">
+        <div className="flex items-center gap-2 mb-2">
+          <span className="bg-primary/20 text-primary border border-primary/40 px-2.5 py-0.5 rounded-full text-[11px] font-bold uppercase tracking-wider neon-glow flex items-center gap-1">
+            <Sparkles className="w-2.5 h-2.5" /> Featured
+          </span>
+          <span className="bg-white/10 px-2.5 py-0.5 rounded-full text-[11px] font-bold uppercase text-white border border-white/10">
+            {rom.consoleShortName}
+          </span>
+          {igdb?.screenshots?.length ? (
+            <span className="text-[8px] font-black tracking-widest px-1.5 py-0.5 rounded"
+              style={{ background: 'rgba(147,112,219,0.35)', color: '#d8b4fe', border: '1px solid rgba(147,112,219,0.4)' }}>
+              IGDB
+            </span>
+          ) : null}
+        </div>
+        <h2 className="text-2xl font-black text-white mb-1 uppercase leading-tight">{rom.title}</h2>
+        <p className="text-[12px] text-white/60 mb-4 line-clamp-2">
+          {igdb?.summary ? igdb.summary.slice(0, 100) + '…' : `${rom.genre} · ${rom.year} · ${rom.size}`}
+        </p>
+        <a
+          href={rom.downloadUrl}
+          target="_blank"
+          rel="noopener noreferrer"
+          className="inline-flex items-center gap-2 bg-primary text-white px-5 py-2 rounded-full text-sm font-bold neon-glow hover:bg-primary/90 transition-all"
+        >
+          <Download className="w-4 h-4" /> Download ROM
+        </a>
+      </div>
+
+      {/* Dots */}
+      <div className="absolute bottom-5 right-5 flex gap-1.5">
+        {Array.from({ length: total }).map((_, i) => (
+          <button key={i} onClick={() => onDotClick(i)}
+            className={`h-1.5 rounded-full transition-all duration-300 ${i === featuredIdx ? 'w-6 bg-primary neon-glow' : 'w-1.5 bg-white/30 hover:bg-white/50'}`} />
+        ))}
+      </div>
+    </motion.div>
+  );
+}
+
 /* ---------- main ---------- */
 export default function Home() {
-  const { data: allRoms, isLoading: romsLoading } = useAllRoms();
+  const { data: allRoms } = useAllRoms();
   const { data: consoles } = useConsoles();
   const { data: romStats } = useRomStats();
   const { data: downloads } = useGetDownloads();
@@ -88,24 +157,20 @@ export default function Home() {
 
   const [featuredIdx, setFeaturedIdx] = useState(0);
 
-  // Top-rated ROMs with cover art first
   const featuredRoms = allRoms
     ? [...allRoms].sort((a, b) => b.rating - a.rating).slice(0, 6)
     : [];
 
-  // Popular = high rating, any
   const popularRoms = allRoms
     ? [...allRoms].filter((r) => r.rating >= 4).sort((a, b) => b.rating - a.rating).slice(0, 5)
     : [];
 
-  // Platform pie chart data
   const pieData = consoles
     ? consoles.slice(0, 6).map((c) => ({ name: c.shortName, value: c.roms.length }))
     : [];
 
   const PIE_COLORS = ['#7c3aed', '#2563eb', '#06b6d4', '#10b981', '#f59e0b', '#ef4444'];
 
-  // CSS donut chart helpers
   const totalRomCount = pieData.reduce((s, d) => s + d.value, 0) || 1;
   let cumulativePct = 0;
   const segments = pieData.map((d, i) => {
@@ -130,9 +195,7 @@ export default function Home() {
       <div className="flex items-start justify-between gap-4">
         <div>
           <h1 className="text-2xl font-black text-white">{getHour()}, Gamer</h1>
-          <p className="text-sm text-muted-foreground mt-0.5">
-            Here&apos;s what&apos;s happening in your ROM vault today.
-          </p>
+          <p className="text-sm text-muted-foreground mt-0.5">Here&apos;s what&apos;s happening in your ROM vault today.</p>
         </div>
         <div className="flex items-center gap-2 shrink-0">
           <Link href="/browse">
@@ -165,67 +228,27 @@ export default function Home() {
         <div className="lg:col-span-2 glass-panel rounded-2xl overflow-hidden relative h-64 md:h-72">
           <AnimatePresence mode="wait">
             {current ? (
-              <motion.div
+              <FeaturedSlide
                 key={featuredIdx}
-                initial={{ opacity: 0 }}
-                animate={{ opacity: 1 }}
-                exit={{ opacity: 0 }}
-                transition={{ duration: 0.7 }}
-                className="absolute inset-0"
-              >
-                {current.coverUrl ? (
-                  <img src={current.coverUrl} alt={current.title}
-                    className="w-full h-full object-cover object-top" />
-                ) : (
-                  <div className="w-full h-full" style={{ background: current.consoleGradient }} />
-                )}
-                <div className="absolute inset-0 bg-gradient-to-r from-black/90 via-black/60 to-transparent" />
-                <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-transparent to-transparent" />
-
-                <div className="absolute bottom-0 left-0 p-6 max-w-sm">
-                  <div className="flex items-center gap-2 mb-2">
-                    <span className="bg-primary/20 text-primary border border-primary/40 px-2.5 py-0.5 rounded-full text-[11px] font-bold uppercase tracking-wider neon-glow flex items-center gap-1">
-                      <Sparkles className="w-2.5 h-2.5" /> Featured
-                    </span>
-                    <span className="bg-white/10 px-2.5 py-0.5 rounded-full text-[11px] font-bold uppercase text-white border border-white/10">
-                      {current.consoleShortName}
-                    </span>
-                  </div>
-                  <h2 className="text-2xl font-black text-white mb-1 uppercase leading-tight">
-                    {current.title}
-                  </h2>
-                  <p className="text-[12px] text-white/60 mb-4 line-clamp-2">{current.genre} · {current.year} · {current.size}</p>
-                  <a
-                    href={current.downloadUrl}
-                    target="_blank"
-                    rel="noopener noreferrer"
-                    className="inline-flex items-center gap-2 bg-primary text-white px-5 py-2 rounded-full text-sm font-bold neon-glow hover:bg-primary/90 transition-all"
-                  >
-                    <Download className="w-4 h-4" /> Download ROM
-                  </a>
-                </div>
-
-                {/* Dots */}
-                <div className="absolute bottom-5 right-5 flex gap-1.5">
-                  {featuredRoms.map((_, i) => (
-                    <button key={i} onClick={() => setFeaturedIdx(i)}
-                      className={`h-1.5 rounded-full transition-all duration-300 ${i === featuredIdx ? 'w-6 bg-primary neon-glow' : 'w-1.5 bg-white/30 hover:bg-white/50'}`} />
-                  ))}
-                </div>
-              </motion.div>
+                rom={current}
+                featuredIdx={featuredIdx}
+                slideIdx={featuredIdx}
+                total={featuredRoms.length}
+                onDotClick={setFeaturedIdx}
+              />
             ) : (
               <div className="absolute inset-0 animate-pulse bg-white/5" />
             )}
           </AnimatePresence>
 
           {/* Label */}
-          <div className="absolute top-4 right-4 flex items-center gap-1 bg-black/60 backdrop-blur-md px-2.5 py-1 rounded-full border border-white/10">
+          <div className="absolute top-4 right-4 flex items-center gap-1 bg-black/60 backdrop-blur-md px-2.5 py-1 rounded-full border border-white/10 z-10">
             <TrendingUp className="w-3 h-3 text-primary" />
             <span className="text-[11px] font-bold">Top Picks</span>
           </div>
         </div>
 
-        {/* Quick Info Panel — right 1/3 */}
+        {/* Quick Info Panel */}
         <div className="glass-panel rounded-2xl p-4 flex flex-col gap-3">
           <div className="flex items-center justify-between">
             <div>
@@ -244,16 +267,10 @@ export default function Home() {
                 const dash = (seg.pct / 100) * circumference;
                 const offset = -((seg.start / 100) * circumference);
                 return (
-                  <circle
-                    key={i}
-                    cx="50" cy="50" r="38"
-                    fill="none"
-                    stroke={seg.color}
-                    strokeWidth="10"
+                  <circle key={i} cx="50" cy="50" r="38" fill="none"
+                    stroke={seg.color} strokeWidth="10"
                     strokeDasharray={`${dash} ${circumference - dash}`}
-                    strokeDashoffset={offset}
-                    opacity="0.85"
-                  />
+                    strokeDashoffset={offset} opacity="0.85" />
                 );
               })}
             </svg>
@@ -276,11 +293,8 @@ export default function Home() {
             ))}
           </div>
 
-          {/* Emulator hint */}
           <div className="mt-auto pt-2 border-t border-white/5">
-            <p className="text-[11px] text-muted-foreground text-center">
-              Use recommended emulator for best experience
-            </p>
+            <p className="text-[11px] text-muted-foreground text-center">Use recommended emulator for best experience</p>
           </div>
         </div>
       </div>
@@ -300,9 +314,7 @@ export default function Home() {
           </div>
           <div className="space-y-0.5">
             {popularRoms.map((rom, i) => <RomRow key={rom.id} rom={rom} rank={i + 1} />)}
-            {!popularRoms.length && (
-              <p className="text-[12px] text-muted-foreground text-center py-4">Loading...</p>
-            )}
+            {!popularRoms.length && <p className="text-[12px] text-muted-foreground text-center py-4">Loading...</p>}
           </div>
         </div>
 
@@ -322,16 +334,12 @@ export default function Home() {
                 <div className={`w-2 h-2 rounded-full shrink-0 ${dl.status === 'completed' ? 'bg-emerald-400' : dl.status === 'downloading' ? 'bg-primary animate-pulse' : 'bg-muted-foreground'}`} />
                 <div className="min-w-0 flex-1">
                   <p className="text-[13px] font-semibold truncate">{dl.romTitle}</p>
-                  <p className="text-[11px] text-muted-foreground capitalize">
-                    {dl.status} &middot; {dl.platformName}
-                  </p>
+                  <p className="text-[11px] text-muted-foreground capitalize">{dl.status} &middot; {dl.platformName}</p>
                 </div>
                 {dl.status === 'downloading' && (
                   <span className="text-[10px] font-mono text-primary shrink-0">{Math.round(dl.progress)}%</span>
                 )}
-                {dl.status === 'completed' && (
-                  <span className="text-[10px] text-emerald-400 shrink-0">Done</span>
-                )}
+                {dl.status === 'completed' && <span className="text-[10px] text-emerald-400 shrink-0">Done</span>}
               </div>
             ))}
             {!downloads?.length && (
@@ -357,17 +365,11 @@ export default function Home() {
             {news?.slice(0, 4).map((article) => (
               <div key={article.id} className="p-2.5 rounded-lg hover:bg-white/5 transition-colors cursor-pointer group">
                 <span className="text-[10px] font-mono text-accent uppercase tracking-wider">{article.category}</span>
-                <p className="text-[13px] font-semibold mt-0.5 leading-tight group-hover:text-primary transition-colors line-clamp-2">
-                  {article.title}
-                </p>
-                <p className="text-[11px] text-muted-foreground mt-1">
-                  {article.author} · {article.readTime} min read
-                </p>
+                <p className="text-[13px] font-semibold mt-0.5 leading-tight group-hover:text-primary transition-colors line-clamp-2">{article.title}</p>
+                <p className="text-[11px] text-muted-foreground mt-1">{article.author} · {article.readTime} min read</p>
               </div>
             ))}
-            {!news?.length && (
-              <p className="text-[12px] text-muted-foreground text-center py-4">Loading news...</p>
-            )}
+            {!news?.length && <p className="text-[12px] text-muted-foreground text-center py-4">Loading news...</p>}
           </div>
         </div>
       </div>
@@ -383,7 +385,6 @@ export default function Home() {
         <div className="absolute inset-0 border border-primary/20 rounded-2xl" />
         <div className="absolute -left-10 -top-10 w-40 h-40 bg-primary/10 rounded-full blur-[60px]" />
         <div className="absolute -right-10 -bottom-10 w-40 h-40 bg-secondary/10 rounded-full blur-[60px]" />
-
         <div className="flex items-center gap-4 relative">
           <div className="w-10 h-10 rounded-xl flex items-center justify-center neon-glow"
             style={{ background: 'linear-gradient(135deg, #7c3aed, #2563eb)' }}>
@@ -401,7 +402,6 @@ export default function Home() {
           </button>
         </Link>
       </motion.div>
-
     </div>
   );
 }

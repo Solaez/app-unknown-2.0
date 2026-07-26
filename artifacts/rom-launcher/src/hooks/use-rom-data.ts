@@ -1,6 +1,41 @@
 import { useQuery } from '@tanstack/react-query';
 import type { RomDataJson, FlatRom, GithubConsole } from '@/types/rom-types';
 
+/* ── IGDB ── */
+export interface IgdbGameInfo {
+  name: string | null;
+  summary: string | null;
+  rating: number | null;       // 0–10
+  ratingRaw: number | null;    // 0–100
+  ratingCount: number | null;
+  releaseYear: number | null;
+  coverUrl: string | null;
+  screenshots: string[];
+  videoId: string | null;
+  developer: string | null;
+}
+
+export function useIgdbGameInfo(title: string, consoleName?: string, enabled = true) {
+  return useQuery<IgdbGameInfo | null>({
+    queryKey: ['igdb-game-info', title, consoleName ?? ''],
+    queryFn: async () => {
+      const params = new URLSearchParams({ title });
+      if (consoleName) params.set('console', consoleName);
+      const res = await fetch(`/api/igdb/game-info?${params}`);
+      if (!res.ok) return null;
+      return res.json();
+    },
+    enabled: enabled && !!title,
+    staleTime: 1000 * 60 * 60,
+    retry: false,
+  });
+}
+
+/** Lightweight alias — shares cache with useIgdbGameInfo, activates only when `visible` is true */
+export function useIgdbCover(title: string, consoleName: string, visible: boolean) {
+  return useIgdbGameInfo(title, consoleName, visible);
+}
+
 const ROM_JSON_URL =
   'https://raw.githubusercontent.com/Solaez/link-pivigames/refs/heads/main/roms.json';
 

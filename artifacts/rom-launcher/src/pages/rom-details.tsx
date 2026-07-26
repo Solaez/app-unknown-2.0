@@ -5,17 +5,16 @@ import {
   ChevronRight, ChevronDown, ChevronUp, Download,
   Play, Star, Users, Calendar, HardDrive, Globe,
   Cpu, Gamepad2, Shield, Check, ThumbsUp,
-  Monitor, Package, ExternalLink,
+  Monitor, Package, ExternalLink, Tv2,
 } from 'lucide-react';
-import { useRomById, useConsoles } from '@/hooks/use-rom-data';
+import { useRomById, useConsoles, useIgdbGameInfo } from '@/hooks/use-rom-data';
 
-/* ── accent colour for this page ── */
-const A = '#c8a84b'; // gold/amber
+const A = '#c8a84b';
 
 /* ── helpers ── */
 function Accordion({
-  title, count, defaultOpen = false, children,
-}: { title: string; count?: number; defaultOpen?: boolean; children: React.ReactNode }) {
+  title, count, defaultOpen = false, children, badge,
+}: { title: string; count?: number; defaultOpen?: boolean; children: React.ReactNode; badge?: React.ReactNode }) {
   const [open, setOpen] = useState(defaultOpen);
   return (
     <div className="border border-white/6 rounded-xl overflow-hidden" style={{ background: '#1a1a12' }}>
@@ -28,6 +27,7 @@ function Accordion({
           {count !== undefined && (
             <span className="text-[12px] text-white/40 font-normal">{count}</span>
           )}
+          {badge}
         </span>
         {open ? <ChevronUp className="w-4 h-4 text-white/40" /> : <ChevronDown className="w-4 h-4 text-white/40" />}
       </button>
@@ -57,7 +57,6 @@ function FeatureLine({ icon: Icon, text }: { icon: any; text: string }) {
   );
 }
 
-/* ── star bar chart row ── */
 function StarBar({ stars, pct }: { stars: number; pct: number }) {
   return (
     <div className="flex items-center gap-2 text-[12px] text-white/40">
@@ -70,13 +69,52 @@ function StarBar({ stars, pct }: { stars: number; pct: number }) {
   );
 }
 
+function IgdbBadge() {
+  return (
+    <span className="text-[9px] font-black tracking-widest px-1.5 py-0.5 rounded"
+      style={{ background: 'rgba(147,112,219,0.25)', color: '#b48be8', border: '1px solid rgba(147,112,219,0.3)' }}>
+      IGDB
+    </span>
+  );
+}
+
+/* ── Score ring for IGDB rating ── */
+function IgdbScoreRing({ score }: { score: number }) {
+  // score is 0-100
+  const pct = Math.round(score);
+  const colour = pct >= 75 ? '#4ade80' : pct >= 50 ? A : '#f87171';
+  const r = 26;
+  const circ = 2 * Math.PI * r;
+  const dash = (pct / 100) * circ;
+  return (
+    <div className="flex flex-col items-center gap-1">
+      <svg width="66" height="66" viewBox="0 0 66 66">
+        <circle cx="33" cy="33" r={r} fill="none" stroke="rgba(255,255,255,0.08)" strokeWidth="5" />
+        <circle cx="33" cy="33" r={r} fill="none" stroke={colour} strokeWidth="5"
+          strokeDasharray={`${dash} ${circ}`} strokeLinecap="round"
+          transform="rotate(-90 33 33)" />
+        <text x="33" y="33" textAnchor="middle" dominantBaseline="central"
+          style={{ fontSize: 15, fontWeight: 900, fill: colour, fontFamily: 'inherit' }}>
+          {pct}
+        </text>
+      </svg>
+      <p className="text-[10px] text-white/35 uppercase tracking-widest">IGDB Score</p>
+    </div>
+  );
+}
+
 export default function RomDetails() {
   const [, params] = useRoute('/rom/:id');
   const romId = params?.id ? decodeURIComponent(params.id) : '';
   const { data: rom, isLoading } = useRomById(romId);
   const { data: consoles } = useConsoles();
+  const { data: igdb, isLoading: igdbLoading } = useIgdbGameInfo(
+    rom?.title ?? '',
+    rom?.consoleName,
+  );
 
   const [activeThumb, setActiveThumb] = useState(0);
+  const [videoPlaying, setVideoPlaying] = useState(false);
 
   if (isLoading) {
     return (
@@ -107,32 +145,51 @@ export default function RomDetails() {
 
   const console_ = consoles?.find((c) => c.id === rom.consoleId);
 
-  /* build media array */
-  const media: { type: 'image' | 'video'; url: string; thumb: string }[] = [];
-  if (rom.videoId) {
+  /* ── merge IGDB + local data ── */
+  const coverUrl = igdb?.coverUrl || rom.coverUrl;
+  const description = igdb?.summary || rom.description;
+  const developer = igdb?.developer || rom.developer;
+  const releaseYear = igdb?.releaseYear ?? rom.year;
+
+  /* build media array — prefer IGDB screenshots, fall back to ROM cover */
+  const media: { type: 'image' | 'video'; url: string; thumb: string; source?: 'igdb' | 'local'; videoId?: string }[] = [];
+
+  // Video first (prefer IGDB trailer, then ROM video)
+  const videoId = igdb?.videoId || rom.videoId;
+  if (videoId) {
     media.push({
       type: 'video',
-      url: `https://youtube.com/watch?v=${rom.videoId}`,
-      thumb: `https://img.youtube.com/vi/${rom.videoId}/mqdefault.jpg`,
+      url: `https://youtube.com/watch?v=${videoId}`,
+      thumb: `https://img.youtube.com/vi/${videoId}/mqdefault.jpg`,
+      videoId,
     });
   }
-  if (rom.coverUrl) {
-    media.push({ type: 'image', url: rom.coverUrl, thumb: rom.coverUrl });
+
+  // IGDB screenshots
+  if (igdb?.screenshots?.length) {
+    for (const s of igdb.screenshots) {
+      media.push({ type: 'image', url: s, thumb: s.replace('t_screenshot_big', 't_screenshot_med'), source: 'igdb' });
+    }
+  } else if (rom.coverUrl) {
+    // Fall back to local cover as single image
+    media.push({ type: 'image', url: rom.coverUrl, thumb: rom.coverUrl, source: 'local' });
   }
+
   if (media.length === 0) media.push({ type: 'image', url: '', thumb: '' });
 
-  const current = media[activeThumb];
+  const safeThumb = Math.min(activeThumb, media.length - 1);
+  const current = media[safeThumb];
 
-  /* fake review distribution based on rating */
-  const r = rom.rating;
+  /* rating display */
+  const localRating = rom.rating;
   const bars = [
-    { stars: 5, pct: Math.round(r >= 4.5 ? 80 : r >= 4 ? 60 : 35) },
-    { stars: 4, pct: Math.round(r >= 4 ? 15 : r >= 3 ? 30 : 20) },
-    { stars: 3, pct: Math.round(r >= 3 ? 4 : 15) },
+    { stars: 5, pct: Math.round(localRating >= 4.5 ? 80 : localRating >= 4 ? 60 : 35) },
+    { stars: 4, pct: Math.round(localRating >= 4 ? 15 : localRating >= 3 ? 30 : 20) },
+    { stars: 3, pct: Math.round(localRating >= 3 ? 4 : 15) },
     { stars: 2, pct: 2 },
     { stars: 1, pct: 1 },
   ];
-  const reviewCount = Math.round(r * 30 + 19);
+  const reviewCount = igdb?.ratingCount ?? Math.round(localRating * 30 + 19);
 
   /* related ROMs */
   const related = (console_?.roms ?? [])
@@ -140,20 +197,20 @@ export default function RomDetails() {
     .sort((a, b) => b.rating - a.rating)
     .slice(0, 4);
 
+  const igdbBadge = <IgdbBadge />;
+
   return (
-    /* break out of parent padding for hero */
     <div className="-mx-6 -mt-6" style={{ background: '#111108' }}>
 
       {/* ══ HERO ══ */}
       <div className="relative h-64 overflow-hidden">
-        {rom.coverUrl ? (
-          <img src={rom.coverUrl} alt={rom.title}
+        {coverUrl ? (
+          <img src={coverUrl} alt={rom.title}
             className="w-full h-full object-cover object-top"
             style={{ filter: 'brightness(0.55) saturate(1.2)' }} />
         ) : (
           <div className="w-full h-full" style={{ background: rom.consoleGradient, filter: 'brightness(0.45)' }} />
         )}
-        {/* Gradient overlays */}
         <div className="absolute inset-0 bg-gradient-to-t from-[#111108] via-[#111108]/60 to-transparent" />
         <div className="absolute inset-0 bg-gradient-to-r from-[#111108]/80 via-transparent to-transparent" />
       </div>
@@ -173,12 +230,12 @@ export default function RomDetails() {
         {/* Title + meta pills */}
         <div className="mb-6">
           <h1 className="text-4xl font-black text-white mb-3 leading-tight">
-            {rom.title}
+            {igdb?.name || rom.title}
           </h1>
           <div className="flex flex-wrap items-center gap-4 text-[13px] text-white/45">
             <span className="flex items-center gap-1.5">
               <Calendar className="w-3.5 h-3.5" style={{ color: A }} />
-              Releases date: <strong className="text-white/70">{rom.year}</strong>
+              Release: <strong className="text-white/70">{releaseYear}</strong>
             </span>
             <span className="flex items-center gap-1.5">
               <Globe className="w-3.5 h-3.5" style={{ color: A }} />
@@ -192,6 +249,13 @@ export default function RomDetails() {
               <HardDrive className="w-3.5 h-3.5" style={{ color: A }} />
               {rom.size}
             </span>
+            {developer && (
+              <span className="flex items-center gap-1.5">
+                <Cpu className="w-3.5 h-3.5" style={{ color: A }} />
+                {developer}
+                {igdb?.developer && <IgdbBadge />}
+              </span>
+            )}
           </div>
         </div>
 
@@ -201,8 +265,12 @@ export default function RomDetails() {
           {/* ── LEFT COLUMN ── */}
           <div className="space-y-4">
 
-            {/* Screenshots accordion */}
-            <Accordion title="Screenshots" defaultOpen>
+            {/* Media accordion */}
+            <Accordion
+              title={igdb?.screenshots?.length ? 'Screenshots & Trailers' : 'Media'}
+              defaultOpen
+              badge={igdb?.screenshots?.length ? igdbBadge : undefined}
+            >
               <div className="flex gap-3">
                 {/* Thumbnail strip */}
                 {media.length > 1 && (
@@ -210,9 +278,9 @@ export default function RomDetails() {
                     {media.map((m, i) => (
                       <button
                         key={i}
-                        onClick={() => setActiveThumb(i)}
+                        onClick={() => { setActiveThumb(i); setVideoPlaying(false); }}
                         className={`relative w-20 h-14 rounded-lg overflow-hidden border-2 transition-all shrink-0 ${
-                          i === activeThumb ? 'border-[#c8a84b]' : 'border-white/10 hover:border-white/30'
+                          i === safeThumb ? 'border-[#c8a84b]' : 'border-white/10 hover:border-white/30'
                         }`}
                       >
                         {m.thumb ? (
@@ -234,15 +302,27 @@ export default function RomDetails() {
                 <div className="flex-1 relative rounded-xl overflow-hidden bg-black/40">
                   <AnimatePresence mode="wait">
                     <motion.div
-                      key={activeThumb}
+                      key={safeThumb}
                       initial={{ opacity: 0 }}
                       animate={{ opacity: 1 }}
                       exit={{ opacity: 0 }}
                       transition={{ duration: 0.25 }}
                       className="relative"
                     >
-                      {current.url ? (
+                      {/* Inline YouTube embed */}
+                      {current.type === 'video' && videoPlaying && current.videoId ? (
+                        <iframe
+                          className="w-full aspect-video block"
+                          src={`https://www.youtube.com/embed/${current.videoId}?autoplay=1&rel=0&modestbranding=1`}
+                          allow="autoplay; encrypted-media; fullscreen"
+                          allowFullScreen
+                        />
+                      ) : current.url && current.type === 'image' ? (
                         <img src={current.url} alt={rom.title}
+                          className="w-full aspect-video object-cover block" />
+                      ) : current.type === 'video' ? (
+                        /* video thumbnail — not yet playing */
+                        <img src={current.thumb} alt={rom.title}
                           className="w-full aspect-video object-cover block" />
                       ) : (
                         <div className="w-full aspect-video flex items-center justify-center"
@@ -251,19 +331,29 @@ export default function RomDetails() {
                         </div>
                       )}
 
-                      {/* Video overlay */}
-                      {current.type === 'video' && (
-                        <a href={current.url} target="_blank" rel="noopener noreferrer"
-                          className="absolute inset-0 flex flex-col items-center justify-center bg-black/30 group">
-                          <div className="w-14 h-14 rounded-full bg-black/70 border border-white/20 flex items-center justify-center group-hover:scale-110 transition-transform">
-                            <Play className="w-6 h-6 text-white fill-white ml-0.5" />
+                      {/* Play button overlay (only when not yet playing) */}
+                      {current.type === 'video' && !videoPlaying && (
+                        <button
+                          onClick={() => setVideoPlaying(true)}
+                          className="absolute inset-0 flex flex-col items-center justify-center bg-black/40 group hover:bg-black/50 transition-colors"
+                        >
+                          <div className="w-16 h-16 rounded-full bg-red-600 border-2 border-white/20 flex items-center justify-center group-hover:scale-110 group-hover:bg-red-500 transition-all shadow-lg">
+                            <Play className="w-7 h-7 text-white fill-white ml-1" />
                           </div>
-                        </a>
+                          <p className="mt-3 text-[13px] font-semibold text-white/70">Play Trailer</p>
+                        </button>
                       )}
 
-                      {/* Bottom bar with counter */}
-                      <div className="absolute bottom-3 right-3 bg-black/70 backdrop-blur-sm px-2.5 py-1 rounded-lg text-[11px] font-mono text-white/60">
-                        {activeThumb + 1} / {media.length}
+                      {/* Bottom bar */}
+                      <div className="absolute bottom-3 right-3 flex items-center gap-2">
+                        {current.source === 'igdb' && (
+                          <span className="bg-purple-900/70 backdrop-blur-sm px-2 py-0.5 rounded text-[10px] font-bold text-purple-300">
+                            IGDB
+                          </span>
+                        )}
+                        <span className="bg-black/70 backdrop-blur-sm px-2.5 py-1 rounded-lg text-[11px] font-mono text-white/60">
+                          {safeThumb + 1} / {media.length}
+                        </span>
                       </div>
                     </motion.div>
                   </AnimatePresence>
@@ -272,18 +362,25 @@ export default function RomDetails() {
             </Accordion>
 
             {/* Description accordion */}
-            <Accordion title="Description" defaultOpen>
-              <p className="text-[14px] leading-relaxed text-white/55">
-                {rom.description || 'No description available for this ROM.'}
-                {rom.description && rom.description.length > 200 && (
-                  <button className="ml-1 underline underline-offset-2" style={{ color: A }}>
-                    Read more...
-                  </button>
-                )}
-              </p>
+            <Accordion
+              title="Description"
+              defaultOpen
+              badge={igdb?.summary ? igdbBadge : undefined}
+            >
+              {igdbLoading ? (
+                <div className="space-y-2">
+                  <div className="h-3 bg-white/5 animate-pulse rounded w-full" />
+                  <div className="h-3 bg-white/5 animate-pulse rounded w-5/6" />
+                  <div className="h-3 bg-white/5 animate-pulse rounded w-4/6" />
+                </div>
+              ) : (
+                <p className="text-[14px] leading-relaxed text-white/55">
+                  {description || 'No description available for this ROM.'}
+                </p>
+              )}
             </Accordion>
 
-            {/* Requirements / Setup */}
+            {/* Setup / Requirements */}
             {rom.instructions && rom.instructions.length > 0 && (
               <Accordion title="Setup / Requirements">
                 <ol className="space-y-3">
@@ -306,19 +403,37 @@ export default function RomDetails() {
             <Accordion title="Reviews" count={reviewCount}>
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-6">
                 {/* Rating summary */}
-                <div className="flex gap-5 items-start">
-                  <div>
-                    <p className="text-5xl font-black" style={{ color: A }}>{rom.rating.toFixed(1)}</p>
-                    <div className="flex gap-0.5 mt-1.5 mb-1">
-                      {[1,2,3,4,5].map((s) => (
-                        <Star key={s} className="w-3.5 h-3.5"
-                          style={{ color: s <= rom.rating ? A : 'rgba(255,255,255,0.1)', fill: s <= rom.rating ? A : 'transparent' }} />
-                      ))}
+                <div className="space-y-4">
+                  {/* IGDB score ring (if available) */}
+                  {igdb?.ratingRaw != null && (
+                    <div className="flex items-center gap-5 p-3 rounded-xl border border-purple-500/20"
+                      style={{ background: 'rgba(147,112,219,0.07)' }}>
+                      <IgdbScoreRing score={igdb.ratingRaw} />
+                      <div>
+                        <p className="text-[12px] font-bold text-white/60">Based on</p>
+                        <p className="text-[20px] font-black text-white">
+                          {igdb.ratingCount?.toLocaleString() ?? '—'}
+                        </p>
+                        <p className="text-[11px] text-white/35">IGDB ratings</p>
+                      </div>
                     </div>
-                    <p className="text-[11px] text-white/30">{reviewCount} reviews</p>
-                  </div>
-                  <div className="flex-1 space-y-1.5 pt-1">
-                    {bars.map((b) => <StarBar key={b.stars} {...b} />)}
+                  )}
+
+                  {/* Local star rating */}
+                  <div className="flex gap-5 items-start">
+                    <div>
+                      <p className="text-5xl font-black" style={{ color: A }}>{localRating.toFixed(1)}</p>
+                      <div className="flex gap-0.5 mt-1.5 mb-1">
+                        {[1, 2, 3, 4, 5].map((s) => (
+                          <Star key={s} className="w-3.5 h-3.5"
+                            style={{ color: s <= localRating ? A : 'rgba(255,255,255,0.1)', fill: s <= localRating ? A : 'transparent' }} />
+                        ))}
+                      </div>
+                      <p className="text-[11px] text-white/30">{reviewCount} reviews</p>
+                    </div>
+                    <div className="flex-1 space-y-1.5 pt-1">
+                      {bars.map((b) => <StarBar key={b.stars} {...b} />)}
+                    </div>
                   </div>
                 </div>
 
@@ -327,10 +442,10 @@ export default function RomDetails() {
                   <div className="flex items-center justify-between mb-2">
                     <div className="flex items-center gap-2">
                       <div className="w-7 h-7 rounded-full bg-primary/30 flex items-center justify-center text-[11px] font-black text-white">
-                        {rom.developer?.slice(0, 1) ?? 'U'}
+                        {developer?.slice(0, 1) ?? 'U'}
                       </div>
                       <div>
-                        <p className="text-[12px] font-bold text-white">{rom.developer ?? 'Anonymous'}</p>
+                        <p className="text-[12px] font-bold text-white">{developer ?? 'Anonymous'}</p>
                         <p className="text-[10px] text-white/30">{rom.consoleName}</p>
                       </div>
                     </div>
@@ -339,11 +454,11 @@ export default function RomDetails() {
                     </span>
                   </div>
                   <p className="text-[12px] font-bold text-white mb-1">
-                    {rom.rating >= 4.5 ? 'Absolute classic! ⭐⭐⭐⭐⭐' : rom.rating >= 4 ? 'Great ROM! ⭐⭐⭐⭐' : 'Worth playing ⭐⭐⭐'}
+                    {localRating >= 4.5 ? 'Absolute classic! ⭐⭐⭐⭐⭐' : localRating >= 4 ? 'Great ROM! ⭐⭐⭐⭐' : 'Worth playing ⭐⭐⭐'}
                   </p>
                   <p className="text-[12px] text-white/45 leading-relaxed">
-                    {rom.description
-                      ? rom.description.slice(0, 140) + '...'
+                    {description
+                      ? description.slice(0, 140) + '...'
                       : `One of the best ${rom.genre} games for ${rom.consoleName}. Highly recommended for fans of the genre.`}
                   </p>
                 </div>
@@ -356,7 +471,6 @@ export default function RomDetails() {
 
             {/* Download card */}
             <div className="rounded-2xl border border-white/8 overflow-hidden" style={{ background: '#1a1a12' }}>
-              {/* Edition tabs */}
               <div className="grid grid-cols-2 border-b border-white/6">
                 {['Standard', 'Emulation'].map((tab, i) => (
                   <button key={tab}
@@ -372,7 +486,6 @@ export default function RomDetails() {
               </div>
 
               <div className="p-5">
-                {/* "Price" */}
                 <div className="mb-4">
                   <p className="text-[11px] text-white/30 line-through mb-0.5">$59.99</p>
                   <div className="flex items-end gap-3">
@@ -387,7 +500,6 @@ export default function RomDetails() {
                   </p>
                 </div>
 
-                {/* Download button */}
                 {rom.downloadUrl ? (
                   <a href={rom.downloadUrl} target="_blank" rel="noopener noreferrer"
                     className="w-full flex items-center justify-center gap-2 py-3 rounded-xl font-bold text-[14px] text-black mb-2.5 hover:brightness-110 active:scale-[0.98] transition-all"
@@ -403,18 +515,25 @@ export default function RomDetails() {
                   </button>
                 )}
 
-                {/* Add to library */}
                 <button className="w-full flex items-center justify-center gap-2 py-3 rounded-xl font-bold text-[14px] text-white/70 border border-white/10 hover:bg-white/5 transition-colors mb-5">
                   <Package className="w-4 h-4" /> Add to Library
                 </button>
 
-                {/* Feature list */}
                 <div className="space-y-3 border-t border-white/6 pt-4">
                   <FeatureLine icon={Check} text={`Works on ${console_?.emulator ?? 'multiple emulators'}`} />
                   <FeatureLine icon={Shield} text={`Region: ${rom.region || 'Multi-region'}`} />
-                  <FeatureLine icon={Monitor} text={`Format: ${console_?.fileExtensions?.slice(0,2).join(', ') ?? 'ROM'}`} />
+                  <FeatureLine icon={Monitor} text={`Format: ${console_?.fileExtensions?.slice(0, 2).join(', ') ?? 'ROM'}`} />
                   <FeatureLine icon={HardDrive} text={`File size: ${rom.size}`} />
                   <FeatureLine icon={Users} text={`${rom.players} Player${rom.players !== '1' ? 's' : ''} supported`} />
+                  {videoId && (
+                    <a href={`https://youtube.com/watch?v=${videoId}`} target="_blank" rel="noopener noreferrer"
+                      className="flex items-center gap-2 text-[13px] transition-colors hover:brightness-110"
+                      style={{ color: '#ff4444' }}>
+                      <Tv2 className="w-3.5 h-3.5" />
+                      Watch Trailer
+                      {igdb?.videoId && <IgdbBadge />}
+                    </a>
+                  )}
                   {console_?.emulatorUrlWin && (
                     <a href={console_.emulatorUrlWin} target="_blank" rel="noopener noreferrer"
                       className="flex items-center gap-2 text-[13px] transition-colors hover:brightness-110"
@@ -427,7 +546,21 @@ export default function RomDetails() {
               </div>
             </div>
 
-            {/* Related ROMs (like bundles) */}
+            {/* IGDB cover art card */}
+            {igdb?.coverUrl && (
+              <div className="rounded-2xl border border-purple-500/20 overflow-hidden"
+                style={{ background: '#1a1a12' }}>
+                <div className="flex items-center justify-between px-4 py-3 border-b border-purple-500/20">
+                  <p className="font-bold text-[13px] text-white">Cover Art</p>
+                  <IgdbBadge />
+                </div>
+                <img src={igdb.coverUrl} alt={rom.title}
+                  className="w-full object-cover"
+                  style={{ maxHeight: 320, objectPosition: 'top' }} />
+              </div>
+            )}
+
+            {/* Related ROMs */}
             {related.length > 0 && (
               <div className="rounded-2xl border border-white/8 overflow-hidden" style={{ background: '#1a1a12' }}>
                 <div className="flex items-center justify-between px-4 py-3 border-b border-white/6">

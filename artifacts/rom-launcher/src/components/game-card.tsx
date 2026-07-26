@@ -1,32 +1,50 @@
-import { Star, Download, ExternalLink } from 'lucide-react';
+import { useState, useEffect, useRef } from 'react';
+import { Star, Download } from 'lucide-react';
 import { motion } from 'framer-motion';
 import { useLocation } from 'wouter';
 import type { FlatRom } from '@/types/rom-types';
+import { useIgdbCover } from '@/hooks/use-rom-data';
 
 export function GameCard({ rom, index }: { rom: FlatRom; index?: number }) {
   const [, setLocation] = useLocation();
+  const ref = useRef<HTMLDivElement>(null);
+  const [visible, setVisible] = useState(false);
+
+  /* only start IGDB fetch once the card scrolls into view */
+  useEffect(() => {
+    const el = ref.current;
+    if (!el) return;
+    const obs = new IntersectionObserver(
+      ([entry]) => { if (entry.isIntersecting) { setVisible(true); obs.disconnect(); } },
+      { rootMargin: '150px' },
+    );
+    obs.observe(el);
+    return () => obs.disconnect();
+  }, []);
+
+  const { data: igdb } = useIgdbCover(rom.title, rom.consoleName, visible);
+  const coverUrl = igdb?.coverUrl || rom.coverUrl;
 
   const handleDownload = (e: React.MouseEvent) => {
     e.preventDefault();
     e.stopPropagation();
-    if (rom.downloadUrl) {
-      window.open(rom.downloadUrl, '_blank', 'noopener');
-    }
+    if (rom.downloadUrl) window.open(rom.downloadUrl, '_blank', 'noopener');
   };
 
   return (
     <motion.div
+      ref={ref}
       onClick={() => setLocation(`/rom/${encodeURIComponent(rom.id)}`)}
       initial={{ opacity: 0, y: 16 }}
       animate={{ opacity: 1, y: 0 }}
-      transition={{ delay: (index ?? 0) * 0.04 }}
+      transition={{ delay: Math.min((index ?? 0) * 0.03, 0.4) }}
       className="group relative rounded-xl overflow-hidden glass-panel hover:-translate-y-1.5 transition-all duration-300 neon-glow-hover flex flex-col cursor-pointer"
     >
       {/* Cover */}
       <div className="aspect-[3/4] w-full relative shrink-0 overflow-hidden">
-        {rom.coverUrl ? (
+        {coverUrl ? (
           <img
-            src={rom.coverUrl}
+            src={coverUrl}
             alt={rom.title}
             className="w-full h-full object-cover transition-transform duration-500 group-hover:scale-105"
             loading="lazy"
@@ -43,6 +61,14 @@ export function GameCard({ rom, index }: { rom: FlatRom; index?: number }) {
         )}
         <div className="absolute inset-0 bg-gradient-to-t from-black via-black/10 to-transparent" />
 
+        {/* IGDB badge */}
+        {igdb?.coverUrl && (
+          <div className="absolute top-2 left-2 text-[8px] font-black tracking-widest px-1.5 py-0.5 rounded"
+            style={{ background: 'rgba(147,112,219,0.35)', color: '#d8b4fe', border: '1px solid rgba(147,112,219,0.4)' }}>
+            IGDB
+          </div>
+        )}
+
         {/* Rating */}
         <div className="absolute top-2 right-2 bg-black/60 backdrop-blur-md rounded-full px-2 py-0.5 flex items-center gap-1 border border-white/10">
           <Star className="w-2.5 h-2.5 text-yellow-400 fill-yellow-400" />
@@ -55,7 +81,7 @@ export function GameCard({ rom, index }: { rom: FlatRom; index?: number }) {
             onClick={handleDownload}
             className="w-11 h-11 rounded-full bg-primary text-white flex items-center justify-center hover:scale-110 transition-transform neon-glow"
           >
-            <ExternalLink className="w-4 h-4" />
+            <Download className="w-4 h-4" />
           </button>
         </div>
       </div>
