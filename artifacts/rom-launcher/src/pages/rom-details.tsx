@@ -2,64 +2,71 @@ import { useState } from 'react';
 import { useRoute, Link } from 'wouter';
 import { motion, AnimatePresence } from 'framer-motion';
 import {
-  ArrowLeft, Bookmark, ChevronLeft, ChevronRight,
-  Play, Download, User, Users, Trophy, Lock,
-  Gamepad2, Cpu, Globe, Calendar, Star, Flame,
-  ChevronDown, Monitor,
+  ChevronRight, ChevronDown, ChevronUp, Download,
+  Play, Star, Users, Calendar, HardDrive, Globe,
+  Cpu, Gamepad2, Shield, Check, ThumbsUp,
+  Monitor, Package, ExternalLink,
 } from 'lucide-react';
 import { useRomById, useConsoles } from '@/hooks/use-rom-data';
 
-/* ─── Avatar cluster (fake review avatars) ─── */
-const AVATAR_COLORS = ['#7c3aed', '#2563eb', '#06b6d4'];
-function AvatarCluster({ count = 3 }: { count?: number }) {
+/* ── accent colour for this page ── */
+const A = '#c8a84b'; // gold/amber
+
+/* ── helpers ── */
+function Accordion({
+  title, count, defaultOpen = false, children,
+}: { title: string; count?: number; defaultOpen?: boolean; children: React.ReactNode }) {
+  const [open, setOpen] = useState(defaultOpen);
   return (
-    <div className="flex items-center gap-1">
-      <div className="flex -space-x-1.5">
-        {AVATAR_COLORS.slice(0, count).map((c, i) => (
-          <div key={i} className="w-5 h-5 rounded-full border-2 border-[#1c1c28] flex items-center justify-center text-[8px] font-black text-white"
-            style={{ background: c }}>
-            {String.fromCharCode(65 + i)}
-          </div>
-        ))}
-      </div>
+    <div className="border border-white/6 rounded-xl overflow-hidden" style={{ background: '#1a1a12' }}>
+      <button
+        onClick={() => setOpen((o) => !o)}
+        className="w-full flex items-center justify-between px-5 py-4 hover:bg-white/3 transition-colors"
+      >
+        <span className="font-bold text-[15px] text-white flex items-center gap-2">
+          {title}
+          {count !== undefined && (
+            <span className="text-[12px] text-white/40 font-normal">{count}</span>
+          )}
+        </span>
+        {open ? <ChevronUp className="w-4 h-4 text-white/40" /> : <ChevronDown className="w-4 h-4 text-white/40" />}
+      </button>
+      <AnimatePresence>
+        {open && (
+          <motion.div
+            initial={{ height: 0, opacity: 0 }}
+            animate={{ height: 'auto', opacity: 1 }}
+            exit={{ height: 0, opacity: 0 }}
+            transition={{ duration: 0.2 }}
+            className="overflow-hidden border-t border-white/6"
+          >
+            <div className="px-5 py-4">{children}</div>
+          </motion.div>
+        )}
+      </AnimatePresence>
     </div>
   );
 }
 
-/* ─── Dark pill card (developer / publisher) ─── */
-function PillCard({ label, value, gradient }: { label: string; value: string; gradient: string }) {
+function FeatureLine({ icon: Icon, text }: { icon: any; text: string }) {
   return (
-    <div className="rounded-2xl bg-[#1a1a28] border border-white/6 px-4 py-3 flex items-center gap-3">
-      <div className="w-8 h-8 rounded-full shrink-0 flex items-center justify-center text-[11px] font-black text-white"
-        style={{ background: gradient }}>
-        {value.slice(0, 1)}
-      </div>
-      <div>
-        <p className="text-[10px] text-white/35 uppercase tracking-widest font-semibold">{label}</p>
-        <p className="text-[14px] font-bold text-white">{value}</p>
-      </div>
+    <div className="flex items-center gap-2.5 text-[13px] text-white/60">
+      <Icon className="w-3.5 h-3.5 shrink-0" style={{ color: A }} />
+      {text}
     </div>
   );
 }
 
-/* ─── Metadata column ─── */
-function MetaCol({ label, children }: { label: string; children: React.ReactNode }) {
+/* ── star bar chart row ── */
+function StarBar({ stars, pct }: { stars: number; pct: number }) {
   return (
-    <div className="flex flex-col gap-1">
-      <span className="text-[11px] text-white/35 uppercase tracking-wider font-semibold">{label}</span>
-      <div className="text-[14px] font-bold text-white">{children}</div>
+    <div className="flex items-center gap-2 text-[12px] text-white/40">
+      <span className="w-3 text-right">{stars}</span>
+      <div className="flex-1 h-1.5 bg-white/8 rounded-full overflow-hidden">
+        <div className="h-full rounded-full" style={{ width: `${pct}%`, background: A }} />
+      </div>
+      <span className="w-8 text-right">{pct}%</span>
     </div>
-  );
-}
-
-/* ─── Icon button ─── */
-function IconBtn({ icon: Icon, active }: { icon: any; active?: boolean }) {
-  return (
-    <button className={`w-10 h-10 rounded-full flex items-center justify-center transition-all ${
-      active ? 'bg-[#7c3aed]/30 border border-[#7c3aed]/60 neon-glow' : 'bg-white/5 border border-white/8 hover:bg-white/10'
-    }`}>
-      <Icon className={`w-4 h-4 ${active ? 'text-[#7c3aed]' : 'text-white/40'}`} />
-    </button>
   );
 }
 
@@ -69,25 +76,18 @@ export default function RomDetails() {
   const { data: rom, isLoading } = useRomById(romId);
   const { data: consoles } = useConsoles();
 
-  const [slideIdx, setSlideIdx] = useState(0);
+  const [activeThumb, setActiveThumb] = useState(0);
 
-  /* ── loading skeleton ── */
   if (isLoading) {
     return (
-      <div className="space-y-5">
-        <div className="h-7 w-28 bg-white/5 animate-pulse rounded-lg" />
-        <div className="grid grid-cols-3 gap-6">
-          <div className="col-span-1 space-y-3">
-            <div className="aspect-[3/4] bg-white/5 animate-pulse rounded-2xl" />
-            <div className="h-24 bg-white/5 animate-pulse rounded-2xl" />
-            <div className="h-14 bg-white/5 animate-pulse rounded-2xl" />
-            <div className="h-14 bg-white/5 animate-pulse rounded-2xl" />
+      <div className="space-y-4">
+        <div className="h-64 -mx-6 -mt-6 bg-white/5 animate-pulse" />
+        <div className="grid grid-cols-[1fr_340px] gap-6 mt-4">
+          <div className="space-y-3">
+            <div className="h-8 w-2/3 bg-white/5 animate-pulse rounded-lg" />
+            <div className="h-64 bg-white/5 animate-pulse rounded-xl" />
           </div>
-          <div className="col-span-2 space-y-4 pt-2">
-            <div className="h-10 w-3/4 bg-white/5 animate-pulse rounded-xl" />
-            <div className="h-4 w-1/3 bg-white/5 animate-pulse rounded" />
-            <div className="h-16 bg-white/5 animate-pulse rounded-xl" />
-          </div>
+          <div className="h-80 bg-white/5 animate-pulse rounded-xl" />
         </div>
       </div>
     );
@@ -107,381 +107,385 @@ export default function RomDetails() {
 
   const console_ = consoles?.find((c) => c.id === rom.consoleId);
 
-  /* Gallery: YouTube thumbnail + cover as slides */
-  const slides = [
-    ...(rom.videoId ? [`https://img.youtube.com/vi/${rom.videoId}/maxresdefault.jpg`] : []),
-    ...(rom.coverUrl ? [rom.coverUrl] : []),
+  /* build media array */
+  const media: { type: 'image' | 'video'; url: string; thumb: string }[] = [];
+  if (rom.videoId) {
+    media.push({
+      type: 'video',
+      url: `https://youtube.com/watch?v=${rom.videoId}`,
+      thumb: `https://img.youtube.com/vi/${rom.videoId}/mqdefault.jpg`,
+    });
+  }
+  if (rom.coverUrl) {
+    media.push({ type: 'image', url: rom.coverUrl, thumb: rom.coverUrl });
+  }
+  if (media.length === 0) media.push({ type: 'image', url: '', thumb: '' });
+
+  const current = media[activeThumb];
+
+  /* fake review distribution based on rating */
+  const r = rom.rating;
+  const bars = [
+    { stars: 5, pct: Math.round(r >= 4.5 ? 80 : r >= 4 ? 60 : 35) },
+    { stars: 4, pct: Math.round(r >= 4 ? 15 : r >= 3 ? 30 : 20) },
+    { stars: 3, pct: Math.round(r >= 3 ? 4 : 15) },
+    { stars: 2, pct: 2 },
+    { stars: 1, pct: 1 },
   ];
-  if (slides.length === 0) slides.push(''); // always at least one slide
+  const reviewCount = Math.round(r * 30 + 19);
 
-  const totalSlides = Math.max(slides.length, 1);
-  const prev = () => setSlideIdx((i) => (i - 1 + totalSlides) % totalSlides);
-  const next = () => setSlideIdx((i) => (i + 1) % totalSlides);
-
-  const ratingColor =
-    rom.rating >= 4.5 ? '#10b981' : rom.rating >= 3 ? '#f59e0b' : '#ef4444';
-
-  const worksOn = console_?.emulator
-    ? `${console_.emulator} (Win / Mac / Linux)`
-    : 'Emulator required';
-
-  const releaseDateStr = rom.year
-    ? new Date(rom.year, 0, 1).toLocaleDateString('en-US', { year: 'numeric' })
-    : '—';
+  /* related ROMs */
+  const related = (console_?.roms ?? [])
+    .filter((r2) => r2.id !== rom.id)
+    .sort((a, b) => b.rating - a.rating)
+    .slice(0, 4);
 
   return (
-    <div className="pb-6 space-y-6">
+    /* break out of parent padding for hero */
+    <div className="-mx-6 -mt-6" style={{ background: '#111108' }}>
 
-      {/* Back breadcrumb */}
-      <Link href="/browse"
-        className="inline-flex items-center gap-1.5 text-[13px] text-white/35 hover:text-white/70 transition-colors">
-        <ArrowLeft className="w-3.5 h-3.5" /> Browse ROMs
-      </Link>
-
-      {/* ══════════════════════════════════════════
-          MAIN GRID — left column + right column
-      ══════════════════════════════════════════ */}
-      <div className="grid grid-cols-[220px_1fr] gap-8 items-start">
-
-        {/* ── LEFT COLUMN ── */}
-        <div className="flex flex-col gap-3">
-
-          {/* Cover art */}
-          <motion.div
-            initial={{ opacity: 0, y: 12 }}
-            animate={{ opacity: 1, y: 0 }}
-            className="rounded-2xl overflow-hidden shadow-[0_12px_48px_rgba(0,0,0,0.7)] border border-white/8"
-          >
-            {rom.coverUrl ? (
-              <img src={rom.coverUrl} alt={rom.title}
-                className="w-full aspect-[3/4] object-cover block" />
-            ) : (
-              <div className="w-full aspect-[3/4] flex items-center justify-center p-4 text-center"
-                style={{ background: rom.consoleGradient }}>
-                <span className="font-black text-3xl text-white/30 uppercase leading-tight">{rom.title}</span>
-              </div>
-            )}
-          </motion.div>
-
-          {/* Rating card */}
-          <motion.div
-            initial={{ opacity: 0, y: 8 }}
-            animate={{ opacity: 1, y: 0 }}
-            transition={{ delay: 0.05 }}
-            className="rounded-2xl bg-[#1a1a28] border border-white/6 px-4 py-3.5"
-          >
-            <p className="text-[10px] text-white/35 uppercase tracking-widest font-semibold mb-2">Rating</p>
-            <div className="flex items-center justify-between">
-              <div className="flex items-center gap-2">
-                <span className="text-3xl font-black leading-none" style={{ color: ratingColor }}>
-                  {rom.rating.toFixed(1)}
-                </span>
-                <Flame className="w-5 h-5" style={{ color: ratingColor }} />
-              </div>
-            </div>
-            <div className="flex items-center justify-between mt-2">
-              <AvatarCluster count={3} />
-              <span className="text-[11px] text-white/30 font-mono">
-                Reviews: {(rom.rating * 30 + 19) | 0}
-              </span>
-            </div>
-          </motion.div>
-
-          {/* Developer */}
-          <motion.div initial={{ opacity: 0, y: 6 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.08 }}>
-            <PillCard label="Developer" value={rom.developer || 'Unknown'} gradient={rom.consoleGradient} />
-          </motion.div>
-
-          {/* Publisher (use console name as publisher) */}
-          <motion.div initial={{ opacity: 0, y: 6 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.11 }}>
-            <PillCard label="Publisher" value={rom.developer || rom.consoleName} gradient={rom.consoleGradient} />
-          </motion.div>
-        </div>
-
-        {/* ── RIGHT COLUMN ── */}
-        <motion.div
-          initial={{ opacity: 0, x: 16 }}
-          animate={{ opacity: 1, x: 0 }}
-          transition={{ delay: 0.06 }}
-          className="flex flex-col gap-5 pt-1 min-w-0"
-        >
-          {/* Title */}
-          <div>
-            <div className="flex items-start gap-2 mb-1">
-              <Bookmark className="w-5 h-5 text-primary mt-1 shrink-0" />
-              <h1 className="text-3xl font-black text-white leading-tight">
-                {rom.title}
-              </h1>
-            </div>
-            <p className="text-[13px] text-white/40 font-semibold ml-7">
-              {rom.genre}
-            </p>
-          </div>
-
-          {/* Description */}
-          <p className="text-[14px] leading-relaxed text-white/55 italic max-w-lg">
-            {rom.description || 'No description available for this ROM.'}
-          </p>
-
-          {/* Metadata 2×2 grid */}
-          <div className="grid grid-cols-2 gap-x-10 gap-y-4 border-t border-b border-white/6 py-4">
-            {/* Row 1 */}
-            <MetaCol label="Language">
-              <span>
-                Multi{' '}
-                <span className="text-white/30 font-normal text-[12px]">· {rom.region || 'EUR'}</span>
-              </span>
-            </MetaCol>
-
-            <MetaCol label="Works on">
-              <span className="flex items-center gap-1.5">
-                <Monitor className="w-3.5 h-3.5 text-white/40" />
-                {worksOn}
-              </span>
-            </MetaCol>
-
-            {/* Row 2 */}
-            <MetaCol label="Release date">
-              {releaseDateStr}
-            </MetaCol>
-
-            <MetaCol label="Age rating">
-              <div className="flex items-center gap-2">
-                <span className="w-6 h-6 rounded-full bg-red-600 flex items-center justify-center text-[9px] font-black text-white">18</span>
-                <span className="text-[13px] text-white/60">NC-17</span>
-                <span className="ml-1 px-2 py-0.5 rounded-full bg-[#1a1a28] border border-white/10 text-[10px] font-bold text-white/60 flex items-center gap-1">
-                  <Gamepad2 className="w-2.5 h-2.5" /> PARTIAL
-                </span>
-              </div>
-            </MetaCol>
-          </div>
-
-          {/* Icon action buttons */}
-          <div className="flex items-center gap-2">
-            <IconBtn icon={User} />
-            <IconBtn icon={Users} />
-            <IconBtn icon={Download} />
-            <IconBtn icon={Trophy} />
-            <IconBtn icon={Lock} />
-            <IconBtn icon={Gamepad2} active />
-          </div>
-
-          {/* Platform selector + CTA */}
-          <div className="flex flex-col gap-3">
-            {/* Platform hint */}
-            <div className="flex items-center gap-3">
-              {/* Emulator badge (styled like platform icons) */}
-              <div className="w-9 h-9 rounded-full bg-primary/20 border-2 border-primary flex items-center justify-center neon-glow">
-                <Cpu className="w-4 h-4 text-primary" />
-              </div>
-              <div className="w-9 h-9 rounded-full bg-white/5 border border-white/10 flex items-center justify-center">
-                <Globe className="w-4 h-4 text-white/30" />
-              </div>
-              <div className="w-9 h-9 rounded-full bg-white/5 border border-white/10 flex items-center justify-center">
-                <Monitor className="w-4 h-4 text-white/30" />
-              </div>
-            </div>
-
-            {/* Download/launch button */}
-            {rom.downloadUrl ? (
-              <a
-                href={rom.downloadUrl}
-                target="_blank"
-                rel="noopener noreferrer"
-                className="inline-flex items-center justify-center gap-2.5 px-8 py-3 rounded-2xl font-black text-[15px] text-black bg-white hover:bg-white/90 transition-all hover:scale-[1.02] active:scale-[0.98] shadow-[0_4px_24px_rgba(255,255,255,0.12)] w-fit"
-              >
-                <Download className="w-4 h-4" />
-                Download ROM
-              </a>
-            ) : (
-              <button disabled
-                className="inline-flex items-center gap-2.5 px-8 py-3 rounded-2xl font-black text-[15px] bg-white/15 text-white/30 cursor-not-allowed w-fit">
-                <Download className="w-4 h-4" /> No Link Available
-              </button>
-            )}
-
-            <p className="text-[11px] text-white/25">
-              Select an emulator to run this ROM on your system.
-            </p>
-          </div>
-
-          {/* Instructions (collapsed by default) */}
-          {rom.instructions && rom.instructions.length > 0 && (
-            <details className="group rounded-2xl bg-[#1a1a28] border border-white/6 overflow-hidden">
-              <summary className="flex items-center justify-between px-4 py-3 cursor-pointer list-none text-[12px] font-bold text-white/40 uppercase tracking-widest hover:text-white/60 transition-colors">
-                Setup Instructions
-                <ChevronDown className="w-4 h-4 group-open:rotate-180 transition-transform" />
-              </summary>
-              <ol className="px-4 pb-4 space-y-2 border-t border-white/5 pt-3">
-                {rom.instructions.map((step, i) => (
-                  <li key={i} className="text-[13px] text-white/55 flex gap-2.5 leading-relaxed">
-                    <span className="w-5 h-5 rounded-full text-[10px] font-black text-white flex items-center justify-center shrink-0 mt-0.5"
-                      style={{ background: rom.consoleGradient }}>
-                      {i + 1}
-                    </span>
-                    {step}
-                  </li>
-                ))}
-              </ol>
-            </details>
-          )}
-        </motion.div>
+      {/* ══ HERO ══ */}
+      <div className="relative h-64 overflow-hidden">
+        {rom.coverUrl ? (
+          <img src={rom.coverUrl} alt={rom.title}
+            className="w-full h-full object-cover object-top"
+            style={{ filter: 'brightness(0.55) saturate(1.2)' }} />
+        ) : (
+          <div className="w-full h-full" style={{ background: rom.consoleGradient, filter: 'brightness(0.45)' }} />
+        )}
+        {/* Gradient overlays */}
+        <div className="absolute inset-0 bg-gradient-to-t from-[#111108] via-[#111108]/60 to-transparent" />
+        <div className="absolute inset-0 bg-gradient-to-r from-[#111108]/80 via-transparent to-transparent" />
       </div>
 
-      {/* ══════════════════════════════════════════
-          BOTTOM — Screenshot / Trailer gallery
-      ══════════════════════════════════════════ */}
-      <motion.div
-        initial={{ opacity: 0, y: 16 }}
-        animate={{ opacity: 1, y: 0 }}
-        transition={{ delay: 0.18 }}
-        className="relative"
-      >
-        {/* Nav arrows (left side, stacked) */}
-        <div className="absolute left-3 top-1/2 -translate-y-1/2 z-20 flex flex-col gap-2">
-          <button onClick={next}
-            className="w-8 h-8 rounded-xl bg-primary/70 hover:bg-primary border border-primary/50 flex items-center justify-center transition-all hover:scale-110 neon-glow">
-            <ChevronRight className="w-4 h-4 text-white" />
-          </button>
-          <button onClick={prev}
-            className="w-8 h-8 rounded-xl bg-white/10 hover:bg-white/20 border border-white/10 flex items-center justify-center transition-all hover:scale-110">
-            <ChevronLeft className="w-4 h-4 text-white" />
-          </button>
+      {/* ══ CONTENT WRAPPER ══ */}
+      <div className="px-6 pb-12">
+
+        {/* Breadcrumb */}
+        <div className="flex items-center gap-1.5 text-[12px] text-white/30 mb-3 -mt-2">
+          <Link href="/" className="hover:text-white/60 transition-colors">ROMs</Link>
+          <ChevronRight className="w-3 h-3" />
+          <span className="hover:text-white/60 cursor-pointer transition-colors">{rom.genre}</span>
+          <ChevronRight className="w-3 h-3" />
+          <span className="text-white/50">{rom.title}</span>
         </div>
 
-        {/* Main slide */}
-        <div className="rounded-2xl overflow-hidden border border-white/8 shadow-[0_8px_40px_rgba(0,0,0,0.6)] relative">
-          <AnimatePresence mode="wait">
-            <motion.div
-              key={slideIdx}
-              initial={{ opacity: 0 }}
-              animate={{ opacity: 1 }}
-              exit={{ opacity: 0 }}
-              transition={{ duration: 0.4 }}
-              className="relative"
-            >
-              {slides[slideIdx] ? (
-                <img
-                  src={slides[slideIdx]}
-                  alt={`Screenshot ${slideIdx + 1}`}
-                  className="w-full h-64 object-cover object-center"
-                />
-              ) : (
-                <div className="w-full h-64 flex items-center justify-center"
-                  style={{ background: rom.consoleGradient }}>
-                  <span className="font-black text-5xl text-white/20 uppercase">{rom.title}</span>
-                </div>
-              )}
-
-              {/* Dark overlay */}
-              <div className="absolute inset-0 bg-gradient-to-r from-black/60 via-transparent to-transparent" />
-              <div className="absolute inset-0 bg-gradient-to-t from-black/70 via-transparent to-transparent" />
-
-              {/* Play button */}
-              {rom.videoId && slideIdx === 0 && (
-                <a
-                  href={`https://youtube.com/watch?v=${rom.videoId}`}
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  className="absolute inset-0 flex items-center justify-center group"
-                >
-                  <div className="w-14 h-14 rounded-full bg-black/60 backdrop-blur-md border border-white/20 flex items-center justify-center group-hover:scale-110 group-hover:bg-black/80 transition-all">
-                    <Play className="w-6 h-6 text-white fill-white ml-0.5" />
-                  </div>
-                </a>
-              )}
-
-              {/* Counter */}
-              <div className="absolute bottom-4 left-1/2 -translate-x-1/2 bg-black/70 backdrop-blur-md px-3 py-1.5 rounded-full border border-white/10 text-[12px] font-bold font-mono">
-                {slideIdx + 1} of {totalSlides}
-              </div>
-
-              {/* Progress bar */}
-              <div className="absolute bottom-0 left-0 right-0 h-0.5 bg-white/10">
-                <div
-                  className="h-full transition-all duration-500"
-                  style={{
-                    width: `${((slideIdx + 1) / totalSlides) * 100}%`,
-                    background: rom.consoleGradient,
-                  }}
-                />
-              </div>
-            </motion.div>
-          </AnimatePresence>
-        </div>
-
-        {/* Scroll Down hint */}
-        <div className="absolute right-0 bottom-6 flex items-center gap-2 text-[11px] text-white/25">
-          Scroll Down
-          <ChevronDown className="w-4 h-4" />
-        </div>
-
-        {/* Dot indicators */}
-        {totalSlides > 1 && (
-          <div className="flex justify-center gap-1.5 mt-3">
-            {Array.from({ length: totalSlides }).map((_, i) => (
-              <button
-                key={i}
-                onClick={() => setSlideIdx(i)}
-                className={`rounded-full transition-all duration-300 ${
-                  i === slideIdx ? 'w-6 h-1.5' : 'w-1.5 h-1.5 bg-white/20 hover:bg-white/40'
-                }`}
-                style={i === slideIdx ? { background: rom.consoleGradient } : undefined}
-              />
-            ))}
+        {/* Title + meta pills */}
+        <div className="mb-6">
+          <h1 className="text-4xl font-black text-white mb-3 leading-tight">
+            {rom.title}
+          </h1>
+          <div className="flex flex-wrap items-center gap-4 text-[13px] text-white/45">
+            <span className="flex items-center gap-1.5">
+              <Calendar className="w-3.5 h-3.5" style={{ color: A }} />
+              Releases date: <strong className="text-white/70">{rom.year}</strong>
+            </span>
+            <span className="flex items-center gap-1.5">
+              <Globe className="w-3.5 h-3.5" style={{ color: A }} />
+              Multi language: <strong className="text-white/70">Yes</strong>
+            </span>
+            <span className="flex items-center gap-1.5">
+              <Users className="w-3.5 h-3.5" style={{ color: A }} />
+              {rom.players} player{rom.players !== '1' ? 's' : ''}
+            </span>
+            <span className="flex items-center gap-1.5">
+              <HardDrive className="w-3.5 h-3.5" style={{ color: A }} />
+              {rom.size}
+            </span>
           </div>
-        )}
-      </motion.div>
+        </div>
 
-      {/* ── More from console ── */}
-      {(() => {
-        const others = (console_?.roms ?? [])
-          .filter((r) => r.id !== rom.id)
-          .sort((a, b) => b.rating - a.rating)
-          .slice(0, 4);
-        if (!others.length) return null;
-        return (
-          <div className="pt-2">
-            <div className="flex items-center justify-between mb-3">
-              <h2 className="text-[11px] font-bold uppercase tracking-widest text-white/30 flex items-center gap-2">
-                <span className="w-1 h-4 rounded-full" style={{ background: rom.consoleGradient }} />
-                More from {rom.consoleName}
-              </h2>
-              <Link href={`/browse?platformId=${rom.consoleId}`}
-                className="text-[11px] text-primary/60 hover:text-primary transition-colors">
-                View all →
-              </Link>
-            </div>
-            <div className="grid grid-cols-4 gap-3">
-              {others.map((r) => (
-                <Link key={r.id} href={`/rom/${encodeURIComponent(r.id)}`}>
-                  <div className="group rounded-xl overflow-hidden border border-white/6 hover:border-white/20 transition-all hover:-translate-y-0.5 cursor-pointer bg-[#1a1a28]">
-                    <div className="aspect-[3/4] relative">
-                      {r.coverUrl ? (
-                        <img src={r.coverUrl} alt={r.title}
-                          className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500" />
+        {/* ══ TWO-COLUMN LAYOUT ══ */}
+        <div className="grid grid-cols-1 lg:grid-cols-[1fr_320px] gap-6 items-start">
+
+          {/* ── LEFT COLUMN ── */}
+          <div className="space-y-4">
+
+            {/* Screenshots accordion */}
+            <Accordion title="Screenshots" defaultOpen>
+              <div className="flex gap-3">
+                {/* Thumbnail strip */}
+                {media.length > 1 && (
+                  <div className="flex flex-col gap-2 shrink-0">
+                    {media.map((m, i) => (
+                      <button
+                        key={i}
+                        onClick={() => setActiveThumb(i)}
+                        className={`relative w-20 h-14 rounded-lg overflow-hidden border-2 transition-all shrink-0 ${
+                          i === activeThumb ? 'border-[#c8a84b]' : 'border-white/10 hover:border-white/30'
+                        }`}
+                      >
+                        {m.thumb ? (
+                          <img src={m.thumb} alt="" className="w-full h-full object-cover" />
+                        ) : (
+                          <div className="w-full h-full" style={{ background: rom.consoleGradient }} />
+                        )}
+                        {m.type === 'video' && (
+                          <div className="absolute inset-0 flex items-center justify-center bg-black/40">
+                            <Play className="w-4 h-4 text-white fill-white" />
+                          </div>
+                        )}
+                      </button>
+                    ))}
+                  </div>
+                )}
+
+                {/* Main preview */}
+                <div className="flex-1 relative rounded-xl overflow-hidden bg-black/40">
+                  <AnimatePresence mode="wait">
+                    <motion.div
+                      key={activeThumb}
+                      initial={{ opacity: 0 }}
+                      animate={{ opacity: 1 }}
+                      exit={{ opacity: 0 }}
+                      transition={{ duration: 0.25 }}
+                      className="relative"
+                    >
+                      {current.url ? (
+                        <img src={current.url} alt={rom.title}
+                          className="w-full aspect-video object-cover block" />
                       ) : (
-                        <div className="w-full h-full flex items-center justify-center p-3"
+                        <div className="w-full aspect-video flex items-center justify-center"
                           style={{ background: rom.consoleGradient }}>
-                          <span className="font-black text-base text-white/25 uppercase text-center leading-tight">{r.title}</span>
+                          <span className="font-black text-4xl text-white/20 uppercase">{rom.title}</span>
                         </div>
                       )}
-                      <div className="absolute inset-0 bg-gradient-to-t from-black via-transparent to-transparent" />
-                      <div className="absolute bottom-0 left-0 right-0 p-2.5">
-                        <p className="text-[12px] font-bold text-white leading-tight line-clamp-2">{r.title}</p>
-                        <div className="flex items-center gap-1 mt-1">
-                          <Star className="w-2.5 h-2.5 text-yellow-400 fill-yellow-400" />
-                          <span className="text-[10px] text-white/50 font-mono">{r.rating}</span>
-                        </div>
+
+                      {/* Video overlay */}
+                      {current.type === 'video' && (
+                        <a href={current.url} target="_blank" rel="noopener noreferrer"
+                          className="absolute inset-0 flex flex-col items-center justify-center bg-black/30 group">
+                          <div className="w-14 h-14 rounded-full bg-black/70 border border-white/20 flex items-center justify-center group-hover:scale-110 transition-transform">
+                            <Play className="w-6 h-6 text-white fill-white ml-0.5" />
+                          </div>
+                        </a>
+                      )}
+
+                      {/* Bottom bar with counter */}
+                      <div className="absolute bottom-3 right-3 bg-black/70 backdrop-blur-sm px-2.5 py-1 rounded-lg text-[11px] font-mono text-white/60">
+                        {activeThumb + 1} / {media.length}
+                      </div>
+                    </motion.div>
+                  </AnimatePresence>
+                </div>
+              </div>
+            </Accordion>
+
+            {/* Description accordion */}
+            <Accordion title="Description" defaultOpen>
+              <p className="text-[14px] leading-relaxed text-white/55">
+                {rom.description || 'No description available for this ROM.'}
+                {rom.description && rom.description.length > 200 && (
+                  <button className="ml-1 underline underline-offset-2" style={{ color: A }}>
+                    Read more...
+                  </button>
+                )}
+              </p>
+            </Accordion>
+
+            {/* Requirements / Setup */}
+            {rom.instructions && rom.instructions.length > 0 && (
+              <Accordion title="Setup / Requirements">
+                <ol className="space-y-3">
+                  {rom.instructions.map((step, i) => (
+                    <li key={i} className="flex gap-3 text-[13px] text-white/55 leading-relaxed">
+                      <span
+                        className="w-5 h-5 rounded-full text-[10px] font-black text-white flex items-center justify-center shrink-0 mt-0.5"
+                        style={{ background: A, color: '#111108' }}
+                      >
+                        {i + 1}
+                      </span>
+                      {step}
+                    </li>
+                  ))}
+                </ol>
+              </Accordion>
+            )}
+
+            {/* Reviews */}
+            <Accordion title="Reviews" count={reviewCount}>
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-6">
+                {/* Rating summary */}
+                <div className="flex gap-5 items-start">
+                  <div>
+                    <p className="text-5xl font-black" style={{ color: A }}>{rom.rating.toFixed(1)}</p>
+                    <div className="flex gap-0.5 mt-1.5 mb-1">
+                      {[1,2,3,4,5].map((s) => (
+                        <Star key={s} className="w-3.5 h-3.5"
+                          style={{ color: s <= rom.rating ? A : 'rgba(255,255,255,0.1)', fill: s <= rom.rating ? A : 'transparent' }} />
+                      ))}
+                    </div>
+                    <p className="text-[11px] text-white/30">{reviewCount} reviews</p>
+                  </div>
+                  <div className="flex-1 space-y-1.5 pt-1">
+                    {bars.map((b) => <StarBar key={b.stars} {...b} />)}
+                  </div>
+                </div>
+
+                {/* Featured review */}
+                <div className="rounded-xl bg-black/30 border border-white/6 p-4">
+                  <div className="flex items-center justify-between mb-2">
+                    <div className="flex items-center gap-2">
+                      <div className="w-7 h-7 rounded-full bg-primary/30 flex items-center justify-center text-[11px] font-black text-white">
+                        {rom.developer?.slice(0, 1) ?? 'U'}
+                      </div>
+                      <div>
+                        <p className="text-[12px] font-bold text-white">{rom.developer ?? 'Anonymous'}</p>
+                        <p className="text-[10px] text-white/30">{rom.consoleName}</p>
                       </div>
                     </div>
+                    <span className="text-[11px] text-white/30 flex items-center gap-1">
+                      <ThumbsUp className="w-3 h-3" /> {Math.round(reviewCount * 0.7)}
+                    </span>
                   </div>
-                </Link>
-              ))}
+                  <p className="text-[12px] font-bold text-white mb-1">
+                    {rom.rating >= 4.5 ? 'Absolute classic! ⭐⭐⭐⭐⭐' : rom.rating >= 4 ? 'Great ROM! ⭐⭐⭐⭐' : 'Worth playing ⭐⭐⭐'}
+                  </p>
+                  <p className="text-[12px] text-white/45 leading-relaxed">
+                    {rom.description
+                      ? rom.description.slice(0, 140) + '...'
+                      : `One of the best ${rom.genre} games for ${rom.consoleName}. Highly recommended for fans of the genre.`}
+                  </p>
+                </div>
+              </div>
+            </Accordion>
+          </div>
+
+          {/* ── RIGHT SIDEBAR ── */}
+          <div className="space-y-4 lg:sticky lg:top-4">
+
+            {/* Download card */}
+            <div className="rounded-2xl border border-white/8 overflow-hidden" style={{ background: '#1a1a12' }}>
+              {/* Edition tabs */}
+              <div className="grid grid-cols-2 border-b border-white/6">
+                {['Standard', 'Emulation'].map((tab, i) => (
+                  <button key={tab}
+                    className={`py-3 text-[12px] font-bold transition-all ${
+                      i === 0
+                        ? 'text-white border-b-2'
+                        : 'text-white/35 hover:text-white/60'
+                    }`}
+                    style={i === 0 ? { borderBottomColor: A } : undefined}>
+                    {tab}
+                  </button>
+                ))}
+              </div>
+
+              <div className="p-5">
+                {/* "Price" */}
+                <div className="mb-4">
+                  <p className="text-[11px] text-white/30 line-through mb-0.5">$59.99</p>
+                  <div className="flex items-end gap-3">
+                    <p className="text-3xl font-black text-white">FREE</p>
+                    <span className="mb-1 text-[11px] font-bold px-2 py-0.5 rounded text-black"
+                      style={{ background: A }}>
+                      ROM
+                    </span>
+                  </div>
+                  <p className="text-[11px] text-white/25 mt-1">
+                    Requires {console_?.emulator ?? 'an emulator'} to run
+                  </p>
+                </div>
+
+                {/* Download button */}
+                {rom.downloadUrl ? (
+                  <a href={rom.downloadUrl} target="_blank" rel="noopener noreferrer"
+                    className="w-full flex items-center justify-center gap-2 py-3 rounded-xl font-bold text-[14px] text-black mb-2.5 hover:brightness-110 active:scale-[0.98] transition-all"
+                    style={{ background: A }}>
+                    <Download className="w-4 h-4" />
+                    Download ROM →
+                  </a>
+                ) : (
+                  <button disabled
+                    className="w-full flex items-center justify-center gap-2 py-3 rounded-xl font-bold text-[14px] text-white/20 mb-2.5 cursor-not-allowed"
+                    style={{ background: '#2a2a18' }}>
+                    <Download className="w-4 h-4" /> No Link Available
+                  </button>
+                )}
+
+                {/* Add to library */}
+                <button className="w-full flex items-center justify-center gap-2 py-3 rounded-xl font-bold text-[14px] text-white/70 border border-white/10 hover:bg-white/5 transition-colors mb-5">
+                  <Package className="w-4 h-4" /> Add to Library
+                </button>
+
+                {/* Feature list */}
+                <div className="space-y-3 border-t border-white/6 pt-4">
+                  <FeatureLine icon={Check} text={`Works on ${console_?.emulator ?? 'multiple emulators'}`} />
+                  <FeatureLine icon={Shield} text={`Region: ${rom.region || 'Multi-region'}`} />
+                  <FeatureLine icon={Monitor} text={`Format: ${console_?.fileExtensions?.slice(0,2).join(', ') ?? 'ROM'}`} />
+                  <FeatureLine icon={HardDrive} text={`File size: ${rom.size}`} />
+                  <FeatureLine icon={Users} text={`${rom.players} Player${rom.players !== '1' ? 's' : ''} supported`} />
+                  {console_?.emulatorUrlWin && (
+                    <a href={console_.emulatorUrlWin} target="_blank" rel="noopener noreferrer"
+                      className="flex items-center gap-2 text-[13px] transition-colors hover:brightness-110"
+                      style={{ color: A }}>
+                      <ExternalLink className="w-3.5 h-3.5" />
+                      Download {console_.emulator}
+                    </a>
+                  )}
+                </div>
+              </div>
+            </div>
+
+            {/* Related ROMs (like bundles) */}
+            {related.length > 0 && (
+              <div className="rounded-2xl border border-white/8 overflow-hidden" style={{ background: '#1a1a12' }}>
+                <div className="flex items-center justify-between px-4 py-3 border-b border-white/6">
+                  <p className="font-bold text-[13px] text-white">More from {rom.consoleName}</p>
+                  <Link href={`/browse?platformId=${rom.consoleId}`}
+                    className="text-[11px] hover:brightness-110 transition-colors"
+                    style={{ color: A }}>
+                    View all
+                  </Link>
+                </div>
+                <div className="divide-y divide-white/4">
+                  {related.map((r2) => (
+                    <Link key={r2.id} href={`/rom/${encodeURIComponent(r2.id)}`}>
+                      <div className="flex items-center gap-3 px-4 py-3 hover:bg-white/3 transition-colors cursor-pointer group">
+                        <div className="w-10 h-10 rounded-lg overflow-hidden shrink-0 border border-white/8">
+                          {r2.coverUrl ? (
+                            <img src={r2.coverUrl} alt={r2.title} className="w-full h-full object-cover" />
+                          ) : (
+                            <div className="w-full h-full" style={{ background: rom.consoleGradient }} />
+                          )}
+                        </div>
+                        <div className="flex-1 min-w-0">
+                          <p className="text-[13px] font-bold text-white truncate group-hover:text-[#c8a84b] transition-colors">{r2.title}</p>
+                          <p className="text-[11px] text-white/35">{r2.genre}</p>
+                        </div>
+                        <div className="flex items-center gap-1 shrink-0">
+                          <Star className="w-3 h-3 fill-[#c8a84b]" style={{ color: A }} />
+                          <span className="text-[12px] font-mono text-white/50">{r2.rating}</span>
+                        </div>
+                      </div>
+                    </Link>
+                  ))}
+                </div>
+              </div>
+            )}
+
+            {/* Console info card */}
+            <div className="rounded-2xl border border-white/8 p-4" style={{ background: '#1a1a12' }}>
+              <p className="text-[11px] text-white/30 uppercase tracking-widest font-semibold mb-3">Platform</p>
+              <div className="flex items-center gap-3">
+                <div className="w-10 h-10 rounded-xl flex items-center justify-center text-[11px] font-black text-black"
+                  style={{ background: rom.consoleGradient }}>
+                  {rom.consoleShortName.slice(0, 2)}
+                </div>
+                <div>
+                  <p className="text-[14px] font-bold text-white">{rom.consoleName}</p>
+                  <p className="text-[12px] text-white/35">Emulator: {console_?.emulator ?? '—'}</p>
+                </div>
+              </div>
+              {console_?.description && (
+                <p className="text-[12px] text-white/35 mt-3 leading-relaxed border-t border-white/6 pt-3">
+                  {console_.description}
+                </p>
+              )}
             </div>
           </div>
-        );
-      })()}
+        </div>
+      </div>
     </div>
   );
 }
