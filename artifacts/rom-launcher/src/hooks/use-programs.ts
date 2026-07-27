@@ -1,4 +1,5 @@
 import { useQuery } from '@tanstack/react-query';
+import { useSources, DEFAULT_PROGRAMAS_URL } from '@/contexts/sources-context';
 
 export interface ProgramDownload {
   label: string;
@@ -37,14 +38,13 @@ export interface ProgramsData {
   apps: Program[];
 }
 
-const PROGRAMS_URL =
-  'https://raw.githubusercontent.com/Solaez/link-pivigames/refs/heads/main/programas.json';
-
 export function usePrograms() {
+  const { programasUrl } = useSources();
+  const url = programasUrl || DEFAULT_PROGRAMAS_URL;
   return useQuery<ProgramsData>({
-    queryKey: ['programs'],
+    queryKey: ['programs', url],
     queryFn: async () => {
-      const res = await fetch(PROGRAMS_URL);
+      const res = await fetch(url);
       if (!res.ok) throw new Error('Failed to fetch programs');
       return res.json();
     },
@@ -69,5 +69,13 @@ export function useSoftware() {
     data: q.data
       ? { ...q.data, apps: q.data.apps.filter((a) => a.category !== 'Emuladores') }
       : undefined,
+  };
+}
+
+export function useProgramById(id: string | number) {
+  const q = usePrograms();
+  return {
+    ...q,
+    data: q.data?.apps.find((a) => String(a.id) === String(id)),
   };
 }

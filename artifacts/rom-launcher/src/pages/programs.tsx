@@ -1,4 +1,5 @@
 import { useState } from 'react';
+import { Link } from 'wouter';
 import { Download, Search, Star, AppWindow, Tag, ChevronDown, ChevronUp } from 'lucide-react';
 import { useSoftware } from '@/hooks/use-programs';
 import type { Program, ProgramDownload } from '@/hooks/use-programs';
@@ -41,100 +42,89 @@ function DownloadRow({ dl, color }: { dl: ProgramDownload; color: string }) {
 
 /* ── Program card ── */
 function ProgramCard({ app }: { app: Program }) {
-  const [expanded, setExpanded] = useState(false);
   const catColor = CATEGORY_COLORS[app.category] ?? A;
   const downloads = getDownloads(app);
-  const SHOW = 2;
-  const visible = expanded ? downloads : downloads.slice(0, SHOW);
-  const hasMore = downloads.length > SHOW;
 
   return (
-    <div
-      className="rounded-2xl border border-white/8 overflow-hidden flex flex-col transition-all hover:border-white/16 hover:-translate-y-0.5 group"
-      style={{ background: '#141410' }}
-    >
-      {/* Cover */}
-      <div className="relative h-36 overflow-hidden bg-black/40 flex-shrink-0">
-        {app.coverUrl ? (
-          <img
-            src={app.coverUrl}
-            alt={app.name}
-            className="w-full h-full object-cover opacity-90 group-hover:opacity-100 group-hover:scale-105 transition-all duration-300"
-          />
-        ) : (
+    <Link href={`/program/${app.id}`}>
+      <div
+        className="rounded-2xl border border-white/8 overflow-hidden flex flex-col transition-all hover:border-white/20 hover:-translate-y-1 hover:shadow-lg cursor-pointer group"
+        style={{ background: '#141410' }}
+      >
+        {/* Cover */}
+        <div className="relative h-36 overflow-hidden bg-black/40 flex-shrink-0">
+          {app.coverUrl ? (
+            <img
+              src={app.coverUrl}
+              alt={app.name}
+              className="w-full h-full object-cover opacity-90 group-hover:opacity-100 group-hover:scale-105 transition-all duration-300"
+            />
+          ) : (
+            <div
+              className="w-full h-full flex items-center justify-center text-4xl"
+              style={{ background: `${app.color}22` }}
+            >
+              {app.icon}
+            </div>
+          )}
+          <div className="absolute inset-0" style={{ background: 'linear-gradient(to top, rgba(20,20,16,0.9) 0%, transparent 60%)' }} />
+          <div className="absolute top-2 left-2 flex gap-1.5 flex-wrap">
+            <span className="text-[9px] font-black px-1.5 py-0.5 rounded" style={{ background: catColor, color: '#fff' }}>
+              {app.category.toUpperCase()}
+            </span>
+            {app.isNew && (
+              <span className="text-[9px] font-black px-1.5 py-0.5 rounded text-black" style={{ background: A }}>NEW</span>
+            )}
+          </div>
           <div
-            className="w-full h-full flex items-center justify-center text-4xl"
-            style={{ background: `${app.color}22` }}
+            className="absolute bottom-2 left-3 w-8 h-8 rounded-xl flex items-center justify-center text-lg border border-white/10"
+            style={{ background: `${app.color}cc`, backdropFilter: 'blur(4px)' }}
           >
             {app.icon}
           </div>
-        )}
-        <div className="absolute inset-0" style={{ background: 'linear-gradient(to top, rgba(20,20,16,0.9) 0%, transparent 60%)' }} />
-        <div className="absolute top-2 left-2 flex gap-1.5 flex-wrap">
-          <span className="text-[9px] font-black px-1.5 py-0.5 rounded" style={{ background: catColor, color: '#fff' }}>
-            {app.category.toUpperCase()}
-          </span>
-          {app.isNew && (
-            <span className="text-[9px] font-black px-1.5 py-0.5 rounded text-black" style={{ background: A }}>NEW</span>
-          )}
-        </div>
-        <div
-          className="absolute bottom-2 left-3 w-8 h-8 rounded-xl flex items-center justify-center text-lg border border-white/10"
-          style={{ background: `${app.color}cc`, backdropFilter: 'blur(4px)' }}
-        >
-          {app.icon}
-        </div>
-      </div>
-
-      {/* Body */}
-      <div className="p-4 flex-1 flex flex-col gap-3">
-        <div>
-          <h3 className="font-bold text-[14px] text-white truncate">{app.name}</h3>
-          <p className="text-[11px] text-white/40 line-clamp-2 leading-relaxed mt-0.5">{app.description}</p>
         </div>
 
-        {/* Tags */}
-        {app.tags?.length > 0 && (
-          <div className="flex flex-wrap gap-1">
-            {app.tags.slice(0, 3).map((t) => (
-              <span key={t} className="text-[10px] px-1.5 py-0.5 rounded-md border border-white/8 text-white/35">{t}</span>
-            ))}
+        {/* Body */}
+        <div className="p-4 flex-1 flex flex-col gap-3">
+          <div>
+            <h3 className="font-bold text-[14px] text-white truncate group-hover:text-white transition-colors">{app.name}</h3>
+            <p className="text-[11px] text-white/40 line-clamp-2 leading-relaxed mt-0.5">{app.description}</p>
           </div>
-        )}
 
-        {/* Meta row */}
-        <div className="flex items-center gap-3 text-[11px] text-white/30">
-          {app.size && <span>{app.size}</span>}
-          {app.platform && <span className="truncate">{app.platform.split(',')[0]}</span>}
-          {app.rating > 0 && (
-            <span className="flex items-center gap-0.5 ml-auto">
-              <Star className="w-2.5 h-2.5 fill-current" style={{ color: A }} />
-              {app.rating}
+          {/* Tags */}
+          {app.tags?.length > 0 && (
+            <div className="flex flex-wrap gap-1">
+              {app.tags.slice(0, 3).map((t) => (
+                <span key={t} className="text-[10px] px-1.5 py-0.5 rounded-md border border-white/8 text-white/35">{t}</span>
+              ))}
+            </div>
+          )}
+
+          {/* Meta row */}
+          <div className="flex items-center gap-3 text-[11px] text-white/30">
+            {app.size && <span>{app.size}</span>}
+            {app.platform && <span className="truncate">{app.platform.split(',')[0]}</span>}
+            {app.rating > 0 && (
+              <span className="flex items-center gap-0.5 ml-auto">
+                <Star className="w-2.5 h-2.5 fill-current" style={{ color: A }} />
+                {app.rating}
+              </span>
+            )}
+          </div>
+
+          {/* Quick download count */}
+          <div className="mt-auto pt-2 border-t border-white/6 flex items-center justify-between">
+            <span className="text-[11px] text-white/30 flex items-center gap-1.5">
+              <Download className="w-3 h-3" />
+              {downloads.length > 1 ? `${downloads.length} opciones` : 'Descargar'}
             </span>
-          )}
-        </div>
-
-        {/* ── Downloads ── */}
-        <div className="space-y-1.5 mt-auto">
-          {visible.map((dl, i) => (
-            <DownloadRow key={i} dl={dl} color={catColor} />
-          ))}
-
-          {hasMore && (
-            <button
-              onClick={() => setExpanded(v => !v)}
-              className="w-full flex items-center justify-center gap-1.5 py-1.5 rounded-xl text-[11px] font-bold text-white/35 hover:text-white/60 hover:bg-white/5 transition-colors border border-white/6"
-            >
-              {expanded ? (
-                <><ChevronUp className="w-3 h-3" /> Mostrar menos</>
-              ) : (
-                <><ChevronDown className="w-3 h-3" /> {downloads.length - SHOW} opciones más</>
-              )}
-            </button>
-          )}
+            <span className="text-[11px] font-bold text-white/40 group-hover:text-white/70 transition-colors">
+              Ver detalles →
+            </span>
+          </div>
         </div>
       </div>
-    </div>
+    </Link>
   );
 }
 

@@ -4,6 +4,7 @@
 @plugin "@tailwindcss/typography";
 
 @custom-variant dark (&:is(.dark *));
+@custom-variant light (&:is(.light *));
 
 @theme inline {
   --color-background: hsl(var(--background));
@@ -132,6 +133,48 @@
   --sidebar-accent-foreground: 240 5% 90%;
   --sidebar-ring: 262 83% 58%;
 }
+
+/* ── Light mode overrides ── */
+.light {
+  --background: 0 0% 96%;
+  --foreground: 240 10% 8%;
+  --border: 240 10% 82%;
+  --card: 0 0% 100%;
+  --card-foreground: 240 10% 8%;
+  --card-border: 240 10% 85%;
+  --popover: 0 0% 100%;
+  --popover-foreground: 240 10% 8%;
+  --popover-border: 240 10% 85%;
+  --primary-foreground: 0 0% 100%;
+  --secondary-foreground: 0 0% 100%;
+  --muted: 240 5% 88%;
+  --muted-foreground: 240 5% 38%;
+  --accent-foreground: 0 0% 10%;
+  --destructive: 0 84% 50%;
+  --destructive-foreground: 0 0% 100%;
+  --input: 240 10% 82%;
+  --sidebar: 0 0% 93%;
+  --sidebar-foreground: 240 5% 25%;
+  --sidebar-border: 240 10% 82%;
+  --sidebar-accent: 240 5% 86%;
+  --sidebar-accent-foreground: 240 5% 15%;
+}
+
+.light .glass-panel {
+  background: rgba(255,255,255,0.7);
+  backdrop-filter: blur(20px);
+  border-color: rgba(0,0,0,0.08);
+}
+
+.light .bg-aurora {
+  background:
+    radial-gradient(circle at 15% 50%, hsl(var(--primary) / 0.08) 0%, transparent 40%),
+    radial-gradient(circle at 85% 30%, hsl(var(--secondary) / 0.08) 0%, transparent 40%),
+    radial-gradient(circle at 50% 80%, hsl(var(--accent) / 0.08) 0%, transparent 40%);
+}
+
+.light ::-webkit-scrollbar-track { background: hsl(var(--muted)); }
+.light ::-webkit-scrollbar-thumb { background: hsl(var(--border)); }
 
 @layer base {
   * {

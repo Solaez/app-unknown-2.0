@@ -53,7 +53,7 @@ export default function Topbar() {
 
   return (
     <header
-      className="h-14 border-b border-white/5 flex items-center justify-between px-5 z-10 flex-shrink-0"
+      className="h-14 border-b border-white/5 flex items-center justify-between px-5 z-30 flex-shrink-0 relative"
       style={{ background: 'hsl(240 10% 3.5%)' }}
     >
       {/* Search */}
@@ -95,11 +95,11 @@ export default function Topbar() {
           {/* ── Panel ── */}
           {showNotifs && (
             <div
-              className="absolute right-0 top-full mt-2 w-[380px] rounded-2xl overflow-hidden shadow-2xl z-50"
+              className="absolute right-0 top-full mt-2 w-[380px] rounded-2xl overflow-hidden shadow-2xl z-[9999]"
               style={{
                 background: '#111108',
-                border: '1px solid rgba(255,255,255,0.08)',
-                boxShadow: '0 24px 60px rgba(0,0,0,0.7)',
+                border: '1px solid rgba(200,168,75,0.18)',
+                boxShadow: '0 24px 60px rgba(0,0,0,0.85), 0 0 0 1px rgba(200,168,75,0.08)',
               }}
             >
               {/* Header */}

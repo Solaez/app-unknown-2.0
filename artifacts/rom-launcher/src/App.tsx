@@ -2,7 +2,8 @@ import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { Toaster } from '@/components/ui/toaster';
 import { TooltipProvider } from '@/components/ui/tooltip';
 import { Route, Switch, Router as WouterRouter } from 'wouter';
-import { useEffect } from 'react';
+import { ThemeProvider } from '@/contexts/theme-context';
+import { SourcesProvider } from '@/contexts/sources-context';
 
 import Layout from '@/components/layout';
 import Home from '@/pages/home';
@@ -14,6 +15,7 @@ import News from '@/pages/news';
 import RomDetails from '@/pages/rom-details';
 import Settings from '@/pages/settings';
 import Programs from '@/pages/programs';
+import ProgramDetails from '@/pages/program-details';
 import EmulationHub from '@/pages/emulation-hub';
 import NotFound from '@/pages/not-found';
 
@@ -39,6 +41,7 @@ function Router() {
         <Route path="/rom/:id" component={RomDetails} />
         <Route path="/settings" component={Settings} />
         <Route path="/programs" component={Programs} />
+        <Route path="/program/:id" component={ProgramDetails} />
         <Route path="/emulation" component={EmulationHub} />
         <Route component={NotFound} />
       </Switch>
@@ -47,20 +50,19 @@ function Router() {
 }
 
 function App() {
-  useEffect(() => {
-    // Force dark mode for NeonROM aesthetic
-    document.documentElement.classList.add('dark');
-  }, []);
-
   return (
-    <QueryClientProvider client={queryClient}>
-      <TooltipProvider>
-        <WouterRouter base={import.meta.env.BASE_URL.replace(/\/$/, '')}>
-          <Router />
-        </WouterRouter>
-        <Toaster />
-      </TooltipProvider>
-    </QueryClientProvider>
+    <ThemeProvider>
+      <SourcesProvider>
+        <QueryClientProvider client={queryClient}>
+          <TooltipProvider>
+            <WouterRouter base={import.meta.env.BASE_URL.replace(/\/$/, '')}>
+              <Router />
+            </WouterRouter>
+            <Toaster />
+          </TooltipProvider>
+        </QueryClientProvider>
+      </SourcesProvider>
+    </ThemeProvider>
   );
 }
 

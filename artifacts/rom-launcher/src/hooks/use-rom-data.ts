@@ -36,19 +36,20 @@ export function useIgdbCover(title: string, consoleName: string, visible: boolea
   return useIgdbGameInfo(title, consoleName, visible);
 }
 
-const ROM_JSON_URL =
-  'https://raw.githubusercontent.com/Solaez/link-pivigames/refs/heads/main/roms.json';
+import { useSources, DEFAULT_ROM_URL } from '@/contexts/sources-context';
 
-async function fetchRomData(): Promise<RomDataJson> {
-  const res = await fetch(ROM_JSON_URL);
+async function fetchRomData(url: string): Promise<RomDataJson> {
+  const res = await fetch(url);
   if (!res.ok) throw new Error('Failed to fetch ROM data');
   return res.json();
 }
 
 export function useRomData() {
+  const { romUrl } = useSources();
+  const url = romUrl || DEFAULT_ROM_URL;
   return useQuery<RomDataJson>({
-    queryKey: ['github-rom-data'],
-    queryFn: fetchRomData,
+    queryKey: ['github-rom-data', url],
+    queryFn: () => fetchRomData(url),
     staleTime: 1000 * 60 * 30,
   });
 }
