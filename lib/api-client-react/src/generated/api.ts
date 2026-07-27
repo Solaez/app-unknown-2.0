@@ -26,6 +26,7 @@ import type {
   GetRomsParams,
   HealthStatus,
   LibraryEntry,
+  LibraryInput,
   NewsArticle,
   Platform,
   Rom,
@@ -907,6 +908,77 @@ export function useGetLibrary<TData = Awaited<ReturnType<typeof getLibrary>>, TE
 
 
 
+
+export const getAddToLibraryUrl = () => {
+
+
+
+
+  return `/api/library`
+}
+
+/**
+ * @summary Add a ROM to the library
+ */
+export const addToLibrary = async (libraryInput: LibraryInput, options?: RequestInit): Promise<LibraryEntry> => {
+
+  return customFetch<LibraryEntry>(getAddToLibraryUrl(),
+  {
+    ...options,
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json', ...options?.headers },
+    body: JSON.stringify(libraryInput)
+  }
+);}
+
+
+
+
+
+export const getAddToLibraryMutationOptions = <TError = ErrorType<unknown>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof addToLibrary>>, TError,{data: BodyType<LibraryInput>}, TContext>, request?: SecondParameter<typeof customFetch>}
+): UseMutationOptions<Awaited<ReturnType<typeof addToLibrary>>, TError,{data: BodyType<LibraryInput>}, TContext> => {
+
+const mutationKey = ['addToLibrary'];
+const {mutation: mutationOptions, request: requestOptions} = options ?
+      options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
+      options
+      : {...options, mutation: {...options.mutation, mutationKey}}
+      : {mutation: { mutationKey, }, request: undefined};
+
+
+
+
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof addToLibrary>>, {data: BodyType<LibraryInput>}> = (props) => {
+          const {data} = props ?? {};
+
+          return  addToLibrary(data,requestOptions)
+        }
+
+
+
+
+
+
+  return  { mutationFn, ...mutationOptions }}
+
+    export type AddToLibraryMutationResult = NonNullable<Awaited<ReturnType<typeof addToLibrary>>>
+    export type AddToLibraryMutationBody = BodyType<LibraryInput>
+    export type AddToLibraryMutationError = ErrorType<unknown>
+
+    /**
+ * @summary Add a ROM to the library
+ */
+export const useAddToLibrary = <TError = ErrorType<unknown>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof addToLibrary>>, TError,{data: BodyType<LibraryInput>}, TContext>, request?: SecondParameter<typeof customFetch>}
+ ): UseMutationResult<
+        Awaited<ReturnType<typeof addToLibrary>>,
+        TError,
+        {data: BodyType<LibraryInput>},
+        TContext
+      > => {
+      return useMutation(getAddToLibraryMutationOptions(options));
+    }
 
 export const getGetStatsUrl = () => {
 

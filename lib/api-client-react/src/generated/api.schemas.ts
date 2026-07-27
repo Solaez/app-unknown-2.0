@@ -70,6 +70,15 @@ export interface DownloadInput {
   romId: number;
 }
 
+export interface LibraryInput {
+  romTitle: string;
+  platformName: string;
+  platformSlug: string;
+  /** @nullable */
+  coverUrl?: string | null;
+  fileSize: string;
+}
+
 export interface LibraryEntry {
   id: number;
   romId: number;

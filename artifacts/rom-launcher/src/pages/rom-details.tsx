@@ -5,9 +5,12 @@ import {
   ChevronRight, ChevronDown, ChevronUp, Download,
   Play, Star, Users, Calendar, HardDrive, Globe,
   Cpu, Gamepad2, Shield, Check, ThumbsUp,
-  Monitor, Package, ExternalLink, Tv2,
+  Monitor, Package, ExternalLink, Tv2, X,
+  Puzzle, RefreshCw, CheckCircle2, Library,
+  FolderOpen,
 } from 'lucide-react';
 import { useRomById, useConsoles, useIgdbGameInfo } from '@/hooks/use-rom-data';
+import { useAddToLibrary } from '@workspace/api-client-react';
 
 const A = '#c8a84b';
 
@@ -114,7 +117,16 @@ export default function RomDetails() {
   );
 
   const [activeThumb, setActiveThumb] = useState(0);
+  const [activeTab, setActiveTab] = useState<'standard' | 'emulation'>('standard');
   const [videoPlaying, setVideoPlaying] = useState(false);
+  const [showDownloadSheet, setShowDownloadSheet] = useState(false);
+  const [addedToLibrary, setAddedToLibrary] = useState(false);
+
+  const addToLibraryMutation = useAddToLibrary({
+    mutation: {
+      onSuccess: () => setAddedToLibrary(true),
+    },
+  });
 
   if (isLoading) {
     return (
@@ -400,7 +412,7 @@ export default function RomDetails() {
             )}
 
             {/* Reviews */}
-            <Accordion title="Reviews" count={reviewCount}>
+            <Accordion title="Reviews" count={reviewCount} defaultOpen={true}>
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-6">
                 {/* Rating summary */}
                 <div className="space-y-4">
@@ -471,79 +483,216 @@ export default function RomDetails() {
 
             {/* Download card */}
             <div className="rounded-2xl border border-white/8 overflow-hidden" style={{ background: '#1a1a12' }}>
+              {/* Tabs */}
               <div className="grid grid-cols-2 border-b border-white/6">
-                {['Standard', 'Emulation'].map((tab, i) => (
+                {(['standard', 'emulation'] as const).map((tab) => (
                   <button key={tab}
-                    className={`py-3 text-[12px] font-bold transition-all ${
-                      i === 0
+                    onClick={() => setActiveTab(tab)}
+                    className={`py-3 text-[12px] font-bold transition-all capitalize ${
+                      activeTab === tab
                         ? 'text-white border-b-2'
                         : 'text-white/35 hover:text-white/60'
                     }`}
-                    style={i === 0 ? { borderBottomColor: A } : undefined}>
-                    {tab}
+                    style={activeTab === tab ? { borderBottomColor: A } : undefined}>
+                    {tab === 'standard' ? 'Standard' : 'Emulación'}
                   </button>
                 ))}
               </div>
 
-              <div className="p-5">
-                <div className="mb-4">
-                  <p className="text-[11px] text-white/30 line-through mb-0.5">$59.99</p>
-                  <div className="flex items-end gap-3">
-                    <p className="text-3xl font-black text-white">FREE</p>
-                    <span className="mb-1 text-[11px] font-bold px-2 py-0.5 rounded text-black"
-                      style={{ background: A }}>
-                      ROM
-                    </span>
+              {/* ── Standard tab ── */}
+              {activeTab === 'standard' && (
+                <div className="p-5">
+                  <div className="mb-4">
+                    <p className="text-[11px] text-white/30 line-through mb-0.5">$59.99</p>
+                    <div className="flex items-end gap-3">
+                      <p className="text-3xl font-black text-white">FREE</p>
+                      <span className="mb-1 text-[11px] font-bold px-2 py-0.5 rounded text-black"
+                        style={{ background: A }}>ROM</span>
+                    </div>
+                    <p className="text-[11px] text-white/25 mt-1">
+                      Requiere {console_?.emulator ?? 'un emulador'} para funcionar
+                    </p>
                   </div>
-                  <p className="text-[11px] text-white/25 mt-1">
-                    Requires {console_?.emulator ?? 'an emulator'} to run
-                  </p>
-                </div>
 
-                {rom.downloadUrl ? (
-                  <a href={rom.downloadUrl} target="_blank" rel="noopener noreferrer"
-                    className="w-full flex items-center justify-center gap-2 py-3 rounded-xl font-bold text-[14px] text-black mb-2.5 hover:brightness-110 active:scale-[0.98] transition-all"
-                    style={{ background: A }}>
-                    <Download className="w-4 h-4" />
-                    Download ROM →
-                  </a>
-                ) : (
-                  <button disabled
-                    className="w-full flex items-center justify-center gap-2 py-3 rounded-xl font-bold text-[14px] text-white/20 mb-2.5 cursor-not-allowed"
-                    style={{ background: '#2a2a18' }}>
-                    <Download className="w-4 h-4" /> No Link Available
-                  </button>
-                )}
-
-                <button className="w-full flex items-center justify-center gap-2 py-3 rounded-xl font-bold text-[14px] text-white/70 border border-white/10 hover:bg-white/5 transition-colors mb-5">
-                  <Package className="w-4 h-4" /> Add to Library
-                </button>
-
-                <div className="space-y-3 border-t border-white/6 pt-4">
-                  <FeatureLine icon={Check} text={`Works on ${console_?.emulator ?? 'multiple emulators'}`} />
-                  <FeatureLine icon={Shield} text={`Region: ${rom.region || 'Multi-region'}`} />
-                  <FeatureLine icon={Monitor} text={`Format: ${console_?.fileExtensions?.slice(0, 2).join(', ') ?? 'ROM'}`} />
-                  <FeatureLine icon={HardDrive} text={`File size: ${rom.size}`} />
-                  <FeatureLine icon={Users} text={`${rom.players} Player${rom.players !== '1' ? 's' : ''} supported`} />
-                  {videoId && (
-                    <a href={`https://youtube.com/watch?v=${videoId}`} target="_blank" rel="noopener noreferrer"
-                      className="flex items-center gap-2 text-[13px] transition-colors hover:brightness-110"
-                      style={{ color: '#ff4444' }}>
-                      <Tv2 className="w-3.5 h-3.5" />
-                      Watch Trailer
-                      {igdb?.videoId && <IgdbBadge />}
-                    </a>
+                  {(rom.downloadUrl || (rom.downloads && rom.downloads.length > 0)) ? (
+                    <button
+                      onClick={() => setShowDownloadSheet(true)}
+                      className="w-full flex items-center justify-center gap-2 py-3 rounded-xl font-bold text-[14px] text-black mb-2.5 hover:brightness-110 active:scale-[0.98] transition-all"
+                      style={{ background: A }}>
+                      <Download className="w-4 h-4" />
+                      Download ROM →
+                    </button>
+                  ) : (
+                    <button disabled
+                      className="w-full flex items-center justify-center gap-2 py-3 rounded-xl font-bold text-[14px] text-white/20 mb-2.5 cursor-not-allowed"
+                      style={{ background: '#2a2a18' }}>
+                      <Download className="w-4 h-4" /> Sin enlace disponible
+                    </button>
                   )}
-                  {console_?.emulatorUrlWin && (
-                    <a href={console_.emulatorUrlWin} target="_blank" rel="noopener noreferrer"
-                      className="flex items-center gap-2 text-[13px] transition-colors hover:brightness-110"
-                      style={{ color: A }}>
-                      <ExternalLink className="w-3.5 h-3.5" />
-                      Download {console_.emulator}
-                    </a>
+
+                  {addedToLibrary ? (
+                    <div className="w-full flex items-center justify-center gap-2 py-3 rounded-xl font-bold text-[14px] mb-5 border"
+                      style={{ color: A, borderColor: `${A}40`, background: `${A}10` }}>
+                      <CheckCircle2 className="w-4 h-4" /> Añadido a la biblioteca
+                    </div>
+                  ) : (
+                    <button
+                      onClick={() => rom && addToLibraryMutation.mutate({ data: { romTitle: rom.title, platformName: rom.consoleName, platformSlug: rom.consoleId, coverUrl: rom.coverUrl ?? null, fileSize: rom.size } })}
+                      disabled={addToLibraryMutation.isPending}
+                      className="w-full flex items-center justify-center gap-2 py-3 rounded-xl font-bold text-[14px] text-white/70 border border-white/10 hover:bg-white/5 transition-colors mb-5 disabled:opacity-50 disabled:cursor-not-allowed">
+                      <Library className="w-4 h-4" />
+                      {addToLibraryMutation.isPending ? 'Añadiendo…' : 'Añadir a biblioteca'}
+                    </button>
+                  )}
+
+                  <div className="space-y-3 border-t border-white/6 pt-4">
+                    <FeatureLine icon={Check} text={`Compatible con ${console_?.emulator ?? 'múltiples emuladores'}`} />
+                    <FeatureLine icon={Shield} text={`Región: ${rom.region || 'Multi-región'}`} />
+                    <FeatureLine icon={Monitor} text={`Formato: ${console_?.fileExtensions?.slice(0, 2).join(', ') ?? 'ROM'}`} />
+                    <FeatureLine icon={HardDrive} text={`Tamaño: ${rom.size}`} />
+                    <FeatureLine icon={Users} text={`${rom.players} Jugador${rom.players !== '1' ? 'es' : ''}`} />
+                    {videoId && (
+                      <a href={`https://youtube.com/watch?v=${videoId}`} target="_blank" rel="noopener noreferrer"
+                        className="flex items-center gap-2 text-[13px] transition-colors hover:brightness-110"
+                        style={{ color: '#ff4444' }}>
+                        <Tv2 className="w-3.5 h-3.5" />
+                        Ver Tráiler
+                        {igdb?.videoId && <IgdbBadge />}
+                      </a>
+                    )}
+                  </div>
+                </div>
+              )}
+
+              {/* ── Emulation tab ── */}
+              {activeTab === 'emulation' && (
+                <div className="p-5 space-y-5">
+
+                  {/* Emulator identity */}
+                  <div className="flex items-center gap-3 p-3.5 rounded-xl border border-white/8"
+                    style={{ background: 'rgba(200,168,75,0.06)' }}>
+                    <div className="w-11 h-11 rounded-xl flex items-center justify-center shrink-0"
+                      style={{ background: 'rgba(200,168,75,0.15)' }}>
+                      <Cpu className="w-5 h-5" style={{ color: A }} />
+                    </div>
+                    <div>
+                      <p className="text-[13px] font-black text-white">
+                        {console_?.emulator ?? 'Emulador'}
+                      </p>
+                      <p className="text-[11px] text-white/40">
+                        {console_?.name ?? rom.consoleName}
+                      </p>
+                    </div>
+                  </div>
+
+                  {/* Formats supported */}
+                  {console_?.fileExtensions?.length && (
+                    <div>
+                      <p className="text-[10px] font-black text-white/30 uppercase tracking-widest mb-2">
+                        Formatos compatibles
+                      </p>
+                      <div className="flex flex-wrap gap-1.5">
+                        {console_.fileExtensions.map((ext) => (
+                          <span key={ext}
+                            className="text-[11px] font-bold px-2 py-0.5 rounded-md border"
+                            style={{ color: A, borderColor: `${A}30`, background: `${A}0d` }}>
+                            .{ext}
+                          </span>
+                        ))}
+                      </div>
+                    </div>
+                  )}
+
+                  {/* ── Acción principal: Jugar ── */}
+                  <div className="space-y-2">
+                    {(rom.downloadUrl || rom.downloads?.length) ? (
+                      <button
+                        onClick={() => { setActiveTab('standard'); setShowDownloadSheet(true); }}
+                        className="w-full flex items-center justify-center gap-2.5 py-3 rounded-xl font-black text-[14px] text-black hover:brightness-110 active:scale-[0.98] transition-all"
+                        style={{ background: A }}>
+                        <Play className="w-4 h-4 fill-black" />
+                        Jugar
+                      </button>
+                    ) : (
+                      <button disabled
+                        className="w-full flex items-center justify-center gap-2.5 py-3 rounded-xl font-black text-[14px] text-white/20 cursor-not-allowed"
+                        style={{ background: '#2a2a18' }}>
+                        <Play className="w-4 h-4" />
+                        Sin ROM disponible
+                      </button>
+                    )}
+
+                    <button
+                      onClick={() => window.location.href = '/downloads'}
+                      className="w-full flex items-center justify-center gap-2.5 py-3 rounded-xl font-bold text-[13px] border border-white/10 text-white/60 hover:bg-white/5 hover:text-white/80 transition-colors">
+                      <FolderOpen className="w-4 h-4" />
+                      Abrir carpeta contenedora
+                    </button>
+                  </div>
+
+                  {/* ── Obtener emulador ── */}
+                  {(console_?.emulatorUrlWin || console_?.emulatorUrlLinux) && (
+                    <div>
+                      <p className="text-[10px] font-black text-white/30 uppercase tracking-widest mb-2">
+                        Obtener emulador
+                      </p>
+                      <div className="space-y-2">
+                        {console_?.emulatorUrlWin && (
+                          <a href={console_.emulatorUrlWin} target="_blank" rel="noopener noreferrer"
+                            className="flex items-center gap-3 p-3 rounded-xl border border-white/8 hover:bg-white/5 transition-colors group">
+                            <Monitor className="w-4 h-4 shrink-0" style={{ color: A }} />
+                            <div className="flex-1 min-w-0">
+                              <p className="text-[13px] font-bold text-white">
+                                {console_.emulatorExeWin ?? console_.emulator}
+                                <span className="text-white/30 font-normal"> — Windows</span>
+                              </p>
+                            </div>
+                            <ExternalLink className="w-3.5 h-3.5 text-white/30 group-hover:text-white/60 transition-colors shrink-0" />
+                          </a>
+                        )}
+                        {console_?.emulatorUrlLinux && (
+                          <a href={console_.emulatorUrlLinux} target="_blank" rel="noopener noreferrer"
+                            className="flex items-center gap-3 p-3 rounded-xl border border-white/8 hover:bg-white/5 transition-colors group">
+                            <Package className="w-4 h-4 shrink-0" style={{ color: A }} />
+                            <div className="flex-1 min-w-0">
+                              <p className="text-[13px] font-bold text-white">
+                                {console_.emulatorExeLinux ?? console_.emulator}
+                                <span className="text-white/30 font-normal"> — Linux / Steam Deck</span>
+                              </p>
+                            </div>
+                            <ExternalLink className="w-3.5 h-3.5 text-white/30 group-hover:text-white/60 transition-colors shrink-0" />
+                          </a>
+                        )}
+                      </div>
+                    </div>
+                  )}
+
+                  {/* Setup steps */}
+                  {rom.instructions && rom.instructions.length > 0 && (
+                    <div>
+                      <p className="text-[10px] font-black text-white/30 uppercase tracking-widest mb-2">
+                        Pasos de configuración
+                      </p>
+                      <ol className="space-y-2">
+                        {rom.instructions.map((step, i) => (
+                          <li key={i} className="flex items-start gap-2.5 text-[12px] text-white/60">
+                            <span className="w-5 h-5 rounded-full flex items-center justify-center text-[10px] font-black shrink-0 mt-0.5"
+                              style={{ background: `${A}20`, color: A }}>{i + 1}</span>
+                            {step}
+                          </li>
+                        ))}
+                      </ol>
+                    </div>
+                  )}
+
+                  {/* Console description */}
+                  {console_?.description && (
+                    <p className="text-[12px] text-white/35 leading-relaxed border-t border-white/6 pt-4">
+                      {console_.description}
+                    </p>
                   )}
                 </div>
-              </div>
+              )}
             </div>
 
             {/* IGDB cover art card */}
@@ -619,6 +768,131 @@ export default function RomDetails() {
           </div>
         </div>
       </div>
+
+      {/* ── Download Type Selector Sheet ── */}
+      <AnimatePresence>
+        {showDownloadSheet && (
+          <>
+            {/* Backdrop */}
+            <motion.div
+              key="backdrop"
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              exit={{ opacity: 0 }}
+              transition={{ duration: 0.2 }}
+              className="fixed inset-0 z-50"
+              style={{ background: 'rgba(0,0,0,0.75)', backdropFilter: 'blur(4px)' }}
+              onClick={() => setShowDownloadSheet(false)}
+            />
+
+            {/* Sheet panel */}
+            <motion.div
+              key="sheet"
+              initial={{ y: '100%', opacity: 0 }}
+              animate={{ y: 0, opacity: 1 }}
+              exit={{ y: '100%', opacity: 0 }}
+              transition={{ type: 'spring', damping: 28, stiffness: 320 }}
+              className="fixed bottom-0 left-0 right-0 z-50 max-w-lg mx-auto rounded-t-3xl overflow-hidden"
+              style={{ background: '#141410', border: '1px solid rgba(200,168,75,0.15)', borderBottom: 'none' }}
+            >
+              {/* Handle bar */}
+              <div className="flex justify-center pt-3 pb-1">
+                <div className="w-10 h-1 rounded-full" style={{ background: 'rgba(255,255,255,0.15)' }} />
+              </div>
+
+              {/* Header */}
+              <div className="flex items-center justify-between px-5 py-3 border-b" style={{ borderColor: 'rgba(255,255,255,0.06)' }}>
+                <div>
+                  <p className="font-black text-[16px] text-white">Select Download Type</p>
+                  <p className="text-[12px] text-white/40 mt-0.5 truncate max-w-[260px]">{rom.title}</p>
+                </div>
+                <button
+                  onClick={() => setShowDownloadSheet(false)}
+                  className="w-8 h-8 rounded-full flex items-center justify-center transition-colors hover:bg-white/8"
+                  style={{ color: 'rgba(255,255,255,0.4)' }}>
+                  <X className="w-4 h-4" />
+                </button>
+              </div>
+
+              {/* Download type rows */}
+              <div className="px-4 py-3 space-y-2.5 max-h-[55vh] overflow-y-auto">
+                {(() => {
+                  // Normalize: prefer downloads[] array, fall back to downloadUrl
+                  const dlList = rom.downloads?.length
+                    ? rom.downloads
+                    : rom.downloadUrl
+                      ? [{ label: 'Descarga directa', url: rom.downloadUrl, size: rom.size, type: 'base' as const }]
+                      : [];
+
+                  const groups = [
+                    { type: 'base',   label: 'Juego Base',  Icon: Gamepad2,  color: A,         bg: 'rgba(200,168,75,0.12)',   border: 'rgba(200,168,75,0.3)',   iconBg: 'rgba(200,168,75,0.18)',  badge: '#000' },
+                    { type: 'update', label: 'Update Pack',  Icon: RefreshCw, color: '#60a5fa', bg: 'rgba(96,165,250,0.10)',   border: 'rgba(96,165,250,0.28)',  iconBg: 'rgba(96,165,250,0.15)',  badge: '#fff' },
+                    { type: 'dlc',    label: 'DLC Bundle',   Icon: Puzzle,    color: '#a78bfa', bg: 'rgba(167,139,250,0.10)',  border: 'rgba(167,139,250,0.28)', iconBg: 'rgba(167,139,250,0.15)', badge: '#fff' },
+                  ];
+
+                  return groups.flatMap(g => {
+                    const items = dlList.filter(d => d.type === g.type);
+                    const { Icon } = g;
+
+                    if (items.length > 0) {
+                      return items.map((item, i) => (
+                        <a key={`${g.type}-${i}`}
+                          href={item.url || '#'}
+                          target="_blank"
+                          rel="noopener noreferrer"
+                          onClick={() => setShowDownloadSheet(false)}
+                          className="flex items-center gap-4 p-4 rounded-2xl transition-all hover:brightness-110 active:scale-[0.98] group cursor-pointer"
+                          style={{ background: g.bg, border: `1px solid ${g.border}` }}>
+                          <div className="w-11 h-11 rounded-xl flex items-center justify-center shrink-0"
+                            style={{ background: g.iconBg }}>
+                            <Icon className="w-5 h-5" style={{ color: g.color }} />
+                          </div>
+                          <div className="flex-1 min-w-0">
+                            <div className="flex items-center gap-2 mb-0.5 flex-wrap">
+                              <p className="font-bold text-[14px] text-white truncate">{item.label || g.label}</p>
+                              <span className="text-[10px] font-black px-1.5 py-0.5 rounded-md shrink-0"
+                                style={{ background: g.color, color: g.badge }}>{g.label.toUpperCase()}</span>
+                            </div>
+                            <p className="text-[12px] text-white/45">{item.size || rom.size}</p>
+                          </div>
+                          <Download className="w-4 h-4 shrink-0 opacity-60 group-hover:opacity-100 transition-opacity" style={{ color: g.color }} />
+                        </a>
+                      ));
+                    }
+
+                    // Not available
+                    return [(
+                      <div key={g.type}
+                        className="flex items-center gap-4 p-4 rounded-2xl cursor-not-allowed"
+                        style={{ background: 'rgba(255,255,255,0.03)', border: '1px solid rgba(255,255,255,0.06)' }}>
+                        <div className="w-11 h-11 rounded-xl flex items-center justify-center shrink-0"
+                          style={{ background: 'rgba(255,255,255,0.05)' }}>
+                          <Icon className="w-5 h-5 text-white/20" />
+                        </div>
+                        <div className="flex-1 min-w-0">
+                          <div className="flex items-center gap-2 mb-0.5">
+                            <p className="font-bold text-[14px] text-white/30">{g.label}</p>
+                            <span className="text-[10px] font-black px-1.5 py-0.5 rounded-md text-white/20"
+                              style={{ background: 'rgba(255,255,255,0.06)' }}>NO DISPONIBLE</span>
+                          </div>
+                          <p className="text-[12px] text-white/20">No disponible para este ROM</p>
+                        </div>
+                      </div>
+                    )];
+                  });
+                })()}
+              </div>
+
+              {/* Footer note */}
+              <div className="px-5 py-4 border-t" style={{ borderColor: 'rgba(255,255,255,0.06)' }}>
+                <p className="text-[11px] text-center text-white/25">
+                  Downloads are sourced from third-party ROM repositories
+                </p>
+              </div>
+            </motion.div>
+          </>
+        )}
+      </AnimatePresence>
     </div>
   );
 }

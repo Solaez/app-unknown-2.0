@@ -212,6 +212,31 @@ export const GetLibraryResponse = zod.array(GetLibraryResponseItem)
 
 
 /**
+ * @summary Add a ROM to the library
+ */
+export const AddToLibraryBody = zod.object({
+  "romTitle": zod.string(),
+  "platformName": zod.string(),
+  "platformSlug": zod.string(),
+  "coverUrl": zod.string().nullish(),
+  "fileSize": zod.string()
+})
+
+export const AddToLibraryResponse = zod.object({
+  "id": zod.number(),
+  "romId": zod.number(),
+  "romTitle": zod.string(),
+  "platformName": zod.string(),
+  "platformSlug": zod.string(),
+  "coverUrl": zod.string().nullish(),
+  "installedAt": zod.string(),
+  "lastPlayedAt": zod.string().nullish(),
+  "fileSize": zod.string(),
+  "timesPlayed": zod.number()
+})
+
+
+/**
  * @summary Dashboard statistics
  */
 export const GetStatsResponse = zod.object({

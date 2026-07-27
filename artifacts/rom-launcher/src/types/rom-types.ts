@@ -1,3 +1,10 @@
+export interface RomDownload {
+  label: string;
+  url: string;
+  size: string;
+  type: 'base' | 'update' | 'dlc' | 'version';
+}
+
 export interface GithubRom {
   id: string;
   title: string;
@@ -13,6 +20,7 @@ export interface GithubRom {
   coverUrl: string;
   videoId: string;
   instructions: string[];
+  downloads?: RomDownload[];
 }
 
 export interface GithubConsole {

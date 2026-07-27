@@ -225,6 +225,23 @@ paths:
                 type: array
                 items:
                   $ref: "#/components/schemas/LibraryEntry"
+    post:
+      operationId: addToLibrary
+      tags: [library]
+      summary: Add a ROM to the library
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/LibraryInput"
+      responses:
+        "201":
+          description: Library entry created
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/LibraryEntry"
 
   /stats:
     get:
@@ -391,6 +408,25 @@ components:
           type: integer
       required:
         - romId
+
+    LibraryInput:
+      type: object
+      properties:
+        romTitle:
+          type: string
+        platformName:
+          type: string
+        platformSlug:
+          type: string
+        coverUrl:
+          type: ["string", "null"]
+        fileSize:
+          type: string
+      required:
+        - romTitle
+        - platformName
+        - platformSlug
+        - fileSize
 
     LibraryEntry:
       type: object

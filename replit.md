@@ -4,8 +4,8 @@ A ROM library management app with an Express API backend and React frontend.
 
 ## Run & Operate
 
-- **Frontend** — `ROM Launcher` workflow (port 5173, `BASE_PATH=/`)
-- **API server** — `API Server` workflow (port 8080)
+- **Frontend** — `ROM Launcher` workflow (`PORT=5173 BASE_PATH=/`) — visible in the preview pane
+- **API server** — `API Server` workflow (`PORT=8080`) — serves `/api/*` routes
 - `pnpm run typecheck` — full typecheck across all packages
 - `pnpm run build` — typecheck + build all packages
 - `pnpm --filter @workspace/api-spec run codegen` — regenerate API hooks and Zod schemas from the OpenAPI spec

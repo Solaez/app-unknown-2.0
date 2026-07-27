@@ -13,6 +13,8 @@ import Library from '@/pages/library';
 import News from '@/pages/news';
 import RomDetails from '@/pages/rom-details';
 import Settings from '@/pages/settings';
+import Programs from '@/pages/programs';
+import EmulationHub from '@/pages/emulation-hub';
 import NotFound from '@/pages/not-found';
 
 const queryClient = new QueryClient({
@@ -36,6 +38,8 @@ function Router() {
         <Route path="/news" component={News} />
         <Route path="/rom/:id" component={RomDetails} />
         <Route path="/settings" component={Settings} />
+        <Route path="/programs" component={Programs} />
+        <Route path="/emulation" component={EmulationHub} />
         <Route component={NotFound} />
       </Switch>
     </Layout>

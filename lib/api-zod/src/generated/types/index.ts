@@ -12,6 +12,7 @@ export * from './getNewsParams';
 export * from './getRomsParams';
 export * from './healthStatus';
 export * from './libraryEntry';
+export * from './libraryInput';
 export * from './newsArticle';
 export * from './platform';
 export * from './rom';
