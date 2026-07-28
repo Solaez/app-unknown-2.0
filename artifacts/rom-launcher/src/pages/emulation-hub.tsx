@@ -54,7 +54,7 @@ function EmulatorCard({ app }: { app: Program }) {
   return (
     <div
       className="rounded-2xl border border-white/8 overflow-hidden transition-all hover:border-white/18 hover:-translate-y-0.5"
-      style={{ background: 'linear-gradient(145deg, #161612 0%, #111108 100%)' }}
+      style={{ background: 'hsl(var(--card))' }}
     >
       {/* Accent bar */}
       <div className="h-1 w-full" style={{ background: app.color ?? A }} />

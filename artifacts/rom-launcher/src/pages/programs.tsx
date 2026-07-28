@@ -46,10 +46,10 @@ function ProgramCard({ app }: { app: Program }) {
   const downloads = getDownloads(app);
 
   return (
-    <Link href={`/program/${app.id}`}>
+    <Link href={`/program/${app.id}`} className="h-full">
       <div
-        className="rounded-2xl border border-white/8 overflow-hidden flex flex-col transition-all hover:border-white/20 hover:-translate-y-1 hover:shadow-lg cursor-pointer group"
-        style={{ background: '#141410' }}
+        className="h-full rounded-2xl border border-border overflow-hidden flex flex-col transition-all hover:border-border/60 hover:-translate-y-1 hover:shadow-lg cursor-pointer group"
+        style={{ background: 'hsl(var(--card))' }}
       >
         {/* Cover */}
         <div className="relative h-36 overflow-hidden bg-black/40 flex-shrink-0">

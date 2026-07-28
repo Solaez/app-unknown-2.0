@@ -20,7 +20,7 @@ function Accordion({
 }: { title: string; count?: number; defaultOpen?: boolean; children: React.ReactNode; badge?: React.ReactNode }) {
   const [open, setOpen] = useState(defaultOpen);
   return (
-    <div className="border border-white/6 rounded-xl overflow-hidden" style={{ background: '#1a1a12' }}>
+    <div className="border border-border rounded-xl overflow-hidden" style={{ background: 'hsl(var(--card))' }}>
       <button
         onClick={() => setOpen((o) => !o)}
         className="w-full flex items-center justify-between px-5 py-4 hover:bg-white/3 transition-colors"
@@ -212,7 +212,7 @@ export default function RomDetails() {
   const igdbBadge = <IgdbBadge />;
 
   return (
-    <div className="-mx-6 -mt-6" style={{ background: '#111108' }}>
+    <div className="-mx-6 -mt-6" style={{ background: 'hsl(var(--background))' }}>
 
       {/* ══ HERO ══ */}
       <div className="relative h-64 overflow-hidden">
@@ -223,8 +223,8 @@ export default function RomDetails() {
         ) : (
           <div className="w-full h-full" style={{ background: rom.consoleGradient, filter: 'brightness(0.45)' }} />
         )}
-        <div className="absolute inset-0 bg-gradient-to-t from-[#111108] via-[#111108]/60 to-transparent" />
-        <div className="absolute inset-0 bg-gradient-to-r from-[#111108]/80 via-transparent to-transparent" />
+        <div className="absolute inset-0 bg-gradient-to-t from-background via-background/60 to-transparent" />
+        <div className="absolute inset-0 bg-gradient-to-r from-background/80 via-transparent to-transparent" />
       </div>
 
       {/* ══ CONTENT WRAPPER ══ */}
@@ -450,7 +450,7 @@ export default function RomDetails() {
                 </div>
 
                 {/* Featured review */}
-                <div className="rounded-xl bg-black/30 border border-white/6 p-4">
+                <div className="rounded-xl bg-black/30 border border-border p-4">
                   <div className="flex items-center justify-between mb-2">
                     <div className="flex items-center gap-2">
                       <div className="w-7 h-7 rounded-full bg-primary/30 flex items-center justify-center text-[11px] font-black text-white">
@@ -482,7 +482,7 @@ export default function RomDetails() {
           <div className="space-y-4 lg:sticky lg:top-4">
 
             {/* Download card */}
-            <div className="rounded-2xl border border-white/8 overflow-hidden" style={{ background: '#1a1a12' }}>
+            <div className="rounded-2xl border border-border overflow-hidden" style={{ background: 'hsl(var(--card))' }}>
               {/* Tabs */}
               <div className="grid grid-cols-2 border-b border-white/6">
                 {(['standard', 'emulation'] as const).map((tab) => (
@@ -569,7 +569,7 @@ export default function RomDetails() {
                 <div className="p-5 space-y-5">
 
                   {/* Emulator identity */}
-                  <div className="flex items-center gap-3 p-3.5 rounded-xl border border-white/8"
+                  <div className="flex items-center gap-3 p-3.5 rounded-xl border border-border"
                     style={{ background: 'rgba(200,168,75,0.06)' }}>
                     <div className="w-11 h-11 rounded-xl flex items-center justify-center shrink-0"
                       style={{ background: 'rgba(200,168,75,0.15)' }}>
@@ -639,7 +639,7 @@ export default function RomDetails() {
                       <div className="space-y-2">
                         {console_?.emulatorUrlWin && (
                           <a href={console_.emulatorUrlWin} target="_blank" rel="noopener noreferrer"
-                            className="flex items-center gap-3 p-3 rounded-xl border border-white/8 hover:bg-white/5 transition-colors group">
+                            className="flex items-center gap-3 p-3 rounded-xl border border-border hover:bg-white/5 transition-colors group">
                             <Monitor className="w-4 h-4 shrink-0" style={{ color: A }} />
                             <div className="flex-1 min-w-0">
                               <p className="text-[13px] font-bold text-white">
@@ -652,7 +652,7 @@ export default function RomDetails() {
                         )}
                         {console_?.emulatorUrlLinux && (
                           <a href={console_.emulatorUrlLinux} target="_blank" rel="noopener noreferrer"
-                            className="flex items-center gap-3 p-3 rounded-xl border border-white/8 hover:bg-white/5 transition-colors group">
+                            className="flex items-center gap-3 p-3 rounded-xl border border-border hover:bg-white/5 transition-colors group">
                             <Package className="w-4 h-4 shrink-0" style={{ color: A }} />
                             <div className="flex-1 min-w-0">
                               <p className="text-[13px] font-bold text-white">
@@ -698,7 +698,7 @@ export default function RomDetails() {
             {/* IGDB cover art card */}
             {igdb?.coverUrl && (
               <div className="rounded-2xl border border-purple-500/20 overflow-hidden"
-                style={{ background: '#1a1a12' }}>
+                style={{ background: 'hsl(var(--card))' }}>
                 <div className="flex items-center justify-between px-4 py-3 border-b border-purple-500/20">
                   <p className="font-bold text-[13px] text-white">Cover Art</p>
                   <IgdbBadge />
@@ -711,7 +711,7 @@ export default function RomDetails() {
 
             {/* Related ROMs */}
             {related.length > 0 && (
-              <div className="rounded-2xl border border-white/8 overflow-hidden" style={{ background: '#1a1a12' }}>
+              <div className="rounded-2xl border border-border overflow-hidden" style={{ background: 'hsl(var(--card))' }}>
                 <div className="flex items-center justify-between px-4 py-3 border-b border-white/6">
                   <p className="font-bold text-[13px] text-white">More from {rom.consoleName}</p>
                   <Link href={`/browse?platformId=${rom.consoleId}`}
@@ -724,7 +724,7 @@ export default function RomDetails() {
                   {related.map((r2) => (
                     <Link key={r2.id} href={`/rom/${encodeURIComponent(r2.id)}`}>
                       <div className="flex items-center gap-3 px-4 py-3 hover:bg-white/3 transition-colors cursor-pointer group">
-                        <div className="w-10 h-10 rounded-lg overflow-hidden shrink-0 border border-white/8">
+                        <div className="w-10 h-10 rounded-lg overflow-hidden shrink-0 border border-border">
                           {r2.coverUrl ? (
                             <img src={r2.coverUrl} alt={r2.title} className="w-full h-full object-cover" />
                           ) : (
@@ -747,7 +747,7 @@ export default function RomDetails() {
             )}
 
             {/* Console info card */}
-            <div className="rounded-2xl border border-white/8 p-4" style={{ background: '#1a1a12' }}>
+            <div className="rounded-2xl border border-border p-4" style={{ background: 'hsl(var(--card))' }}>
               <p className="text-[11px] text-white/30 uppercase tracking-widest font-semibold mb-3">Platform</p>
               <div className="flex items-center gap-3">
                 <div className="w-10 h-10 rounded-xl flex items-center justify-center text-[11px] font-black text-black"
@@ -793,7 +793,7 @@ export default function RomDetails() {
               exit={{ y: '100%', opacity: 0 }}
               transition={{ type: 'spring', damping: 28, stiffness: 320 }}
               className="fixed bottom-0 left-0 right-0 z-50 max-w-lg mx-auto rounded-t-3xl overflow-hidden"
-              style={{ background: '#141410', border: '1px solid rgba(200,168,75,0.15)', borderBottom: 'none' }}
+              style={{ background: 'hsl(var(--muted))', border: '1px solid rgba(200,168,75,0.15)', borderBottom: 'none' }}
             >
               {/* Handle bar */}
               <div className="flex justify-center pt-3 pb-1">

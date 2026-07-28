@@ -10,6 +10,7 @@ import {
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { useTheme } from '@/contexts/theme-context';
+import { useLang } from '@/contexts/language-context';
 import { useSources, DEFAULT_ROM_URL, DEFAULT_PROGRAMAS_URL } from '@/contexts/sources-context';
 import { useRomStats } from '@/hooks/use-rom-data';
 import { usePrograms } from '@/hooks/use-programs';
@@ -285,6 +286,7 @@ function SourceCard({ icon, label, typeColor, url, defaultUrl, stats, isLoading,
 /* ─── main ─── */
 export default function Settings() {
   const { accent, theme, setAccent, setTheme } = useTheme();
+  const { lang, setLang, t } = useLang();
   const { romUrl, programasUrl, setRomUrl, setProgramasUrl } = useSources();
 
   const [section, setSection] = useState<Section>('appearance');
@@ -532,11 +534,11 @@ export default function Settings() {
             {/* ── PROFILE ── */}
             {section === 'profile' && (
               <div>
-                <h2 className="text-2xl font-black mb-1">Perfil</h2>
-                <p className="text-sm text-muted-foreground mb-6">Gestiona tu identidad en NeonROM.</p>
+                <h2 className="text-2xl font-black mb-1">{t('profileSection')}</h2>
+                <p className="text-sm text-muted-foreground mb-6">{t('profileDesc')}</p>
                 <div className="space-y-4">
                   <Card>
-                    <SectionTitle>Información</SectionTitle>
+                    <SectionTitle>{t('infoSection')}</SectionTitle>
                     <div className="flex items-center gap-4 mb-6">
                       <div className="w-16 h-16 rounded-2xl flex items-center justify-center text-2xl font-black text-white neon-glow" style={{ background: accent }}>
                         {settings.username.slice(0, 1).toUpperCase()}
@@ -549,32 +551,68 @@ export default function Settings() {
                       </div>
                     </div>
                     <div>
-                      <label className="text-[12px] font-semibold text-muted-foreground uppercase tracking-wide block mb-1.5">Nombre de usuario</label>
-                      <input type="text" value={settings.username} onChange={(e) => set('username', e.target.value)} className="w-full bg-black/40 border border-white/10 rounded-xl px-4 py-2.5 text-sm focus:outline-none focus:border-primary/50 transition-all" />
+                      <label className="text-[12px] font-semibold text-muted-foreground uppercase tracking-wide block mb-1.5">{t('usernameLabel')}</label>
+                      <input type="text" value={settings.username} onChange={(e) => set('username', e.target.value)} className="w-full bg-muted/50 border border-border rounded-xl px-4 py-2.5 text-sm focus:outline-none focus:border-primary/50 transition-all text-foreground" />
                     </div>
                   </Card>
+
+                  {/* ── Language ── */}
                   <Card>
-                    <SectionTitle>Suscripción</SectionTitle>
+                    <SectionTitle>{t('langSection')}</SectionTitle>
+                    <p className="text-[12px] text-muted-foreground mb-4">{t('langDesc')}</p>
+                    <div className="grid grid-cols-2 gap-3">
+                      {([
+                        { id: 'es' as const, label: t('langSpanish'), desc: t('langSpanishDesc'), flag: '🇪🇸' },
+                        { id: 'en' as const, label: t('langEnglish'), desc: t('langEnglishDesc'), flag: '🇺🇸' },
+                      ]).map(({ id, label, desc, flag }) => {
+                        const active = lang === id;
+                        return (
+                          <button
+                            key={id}
+                            onClick={() => setLang(id)}
+                            className={cn(
+                              'flex items-center gap-3 p-4 rounded-2xl border-2 transition-all text-left',
+                              active ? 'border-primary bg-primary/10' : 'border-border bg-muted/30 hover:border-border/80 hover:bg-muted/50',
+                            )}
+                          >
+                            <span className="text-2xl">{flag}</span>
+                            <div className="flex-1 min-w-0">
+                              <p className={cn('text-[13px] font-bold', active ? 'text-primary' : 'text-foreground')}>{label}</p>
+                              <p className="text-[11px] text-muted-foreground">{desc}</p>
+                            </div>
+                            {active && (
+                              <div className="w-5 h-5 rounded-full bg-primary flex items-center justify-center shrink-0">
+                                <Check className="w-3 h-3 text-white" />
+                              </div>
+                            )}
+                          </button>
+                        );
+                      })}
+                    </div>
+                  </Card>
+
+                  <Card>
+                    <SectionTitle>{t('subscriptionSection')}</SectionTitle>
                     <div className="flex items-center justify-between p-4 rounded-xl border border-primary/20 bg-primary/5">
                       <div>
-                        <p className="font-bold flex items-center gap-2">Plan Free <span className="text-[11px] bg-white/10 px-2 py-0.5 rounded-full font-mono">ACTUAL</span></p>
-                        <p className="text-[12px] text-muted-foreground mt-0.5">Descargas limitadas · Velocidad estándar</p>
+                        <p className="font-bold flex items-center gap-2">{t('freePlanName')} <span className="text-[11px] bg-muted px-2 py-0.5 rounded-full font-mono">{t('currentPlan')}</span></p>
+                        <p className="text-[12px] text-muted-foreground mt-0.5">{t('freePlanDesc')}</p>
                       </div>
                     </div>
                     <div className="flex items-center justify-between p-4 rounded-xl border border-yellow-500/20 bg-yellow-500/5 mt-3">
                       <div>
-                        <p className="font-bold text-yellow-400 flex items-center gap-2"><Zap className="w-4 h-4" /> Plan Pro</p>
-                        <p className="text-[12px] text-muted-foreground mt-0.5">Descargas ilimitadas · Máxima velocidad</p>
+                        <p className="font-bold text-yellow-400 flex items-center gap-2"><Zap className="w-4 h-4" /> {t('proPlanName')}</p>
+                        <p className="text-[12px] text-muted-foreground mt-0.5">{t('proPlanDesc')}</p>
                       </div>
-                      <button className="px-4 py-2 rounded-xl text-sm font-bold text-white shrink-0" style={{ background: 'linear-gradient(135deg, #f59e0b, #f97316)' }}>Mejorar</button>
+                      <button className="px-4 py-2 rounded-xl text-sm font-bold text-white shrink-0" style={{ background: 'linear-gradient(135deg, #f59e0b, #f97316)' }}>{t('upgrade')}</button>
                     </div>
                   </Card>
                   <Card>
-                    <SectionTitle>Notificaciones</SectionTitle>
-                    <SettingRow label="Descarga completada" sub="Alerta cuando un ROM termina de descargar" icon={Bell}>
+                    <SectionTitle>{t('notifsSection')}</SectionTitle>
+                    <SettingRow label={t('notifCompleted')} sub={t('notifCompletedSub')} icon={Bell}>
                       <Toggle checked={settings.notifyCompleted} onChange={(v) => set('notifyCompleted', v)} />
                     </SettingRow>
-                    <SettingRow label="Actualizaciones" sub="Notificar cuando hay una nueva versión" icon={Bell}>
+                    <SettingRow label={t('notifUpdates')} sub={t('notifUpdatesSub')} icon={Bell}>
                       <Toggle checked={settings.notifyUpdates} onChange={(v) => set('notifyUpdates', v)} />
                     </SettingRow>
                   </Card>
